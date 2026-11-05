@@ -530,30 +530,81 @@
         <span class="text-slate-200">{{ t('바꾸고 싶은 글자나 영역을 직접 클릭', 'click directly on the text or area you want to change') }}</span>{{ t('하면 오른쪽에 그 부분의 설정이 나타납니다.', ' and its settings will appear on the right.') }}
       </p>
 
-      <!-- 카드 레이아웃 선택 -->
+      <!-- 카드 레이아웃 선택: 기본카드 / 예전 KTX 카드 / [카드 추가]로 만든 카드 -->
       <div class="mt-4 flex flex-wrap items-center gap-2 text-sm">
         <span class="text-slate-400">{{ t('카드 레이아웃', 'Card Layout') }}</span>
         <button
+          v-for="c in cardList"
+          :key="c.id"
           type="button"
           class="rounded-md px-3 py-1.5 ring-1"
-          :class="profitCardDraft.layout === 'breaker' ? 'bg-indigo-500/25 text-indigo-100 ring-indigo-400/40' : 'bg-white/5 text-slate-300 ring-white/10 hover:bg-white/10'"
-          @click="profitCardDraft.layout = 'breaker'"
+          :class="profitCardDraft.layout === c.id ? 'bg-indigo-500/25 text-indigo-100 ring-indigo-400/40' : 'bg-white/5 text-slate-300 ring-white/10 hover:bg-white/10'"
+          @click="selectCardLayout(c.id)"
         >
-          {{ t('코인브레이커 카드', 'Coin Breaker Card') }}
+          {{ c.name }}
         </button>
-        <button
-          type="button"
-          class="rounded-md px-3 py-1.5 ring-1"
-          :class="profitCardDraft.layout === 'ktx' ? 'bg-indigo-500/25 text-indigo-100 ring-indigo-400/40' : 'bg-white/5 text-slate-300 ring-white/10 hover:bg-white/10'"
-          @click="profitCardDraft.layout = 'ktx'"
-        >
-          {{ t('예전 KTX 카드', 'Previous KTX Card') }}
+        <span class="mx-1 h-5 w-px bg-white/10" />
+        <button type="button" class="rounded-md bg-emerald-500/15 px-3 py-1.5 text-emerald-200 ring-1 ring-emerald-400/30 hover:bg-emerald-500/25 disabled:cursor-not-allowed disabled:opacity-40" :disabled="profitCardDraft.cards.length >= PROFIT_CARD_MAX_CUSTOM" @click="openCardAdd">
+          + {{ t('카드 추가', 'Add Card') }}
         </button>
-        <span class="text-xs text-slate-500">{{ t('저장하면 거래소 수익카드가 선택한 레이아웃으로 바뀝니다.', 'After saving, the exchange profit card uses the selected layout.') }}</span>
+        <button type="button" class="rounded-md bg-white/5 px-3 py-1.5 text-slate-200 ring-1 ring-white/15 hover:bg-white/10" @click="openCardManage">
+          {{ t('카드관리', 'Manage Cards') }}
+        </button>
+        <span class="text-xs text-slate-500">{{ t('저장하면 거래소 수익카드가 선택한 카드로 바뀝니다.', 'After saving, the exchange profit card uses the selected card.') }}</span>
+      </div>
+
+      <!-- [카드 추가] 창 -->
+      <div v-if="cardAddOpen" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4" @click.self="cardAddOpen = false">
+        <div class="w-full max-w-md rounded-2xl border border-white/10 bg-slate-900 p-5 shadow-2xl">
+          <h3 class="text-base font-semibold text-slate-100">{{ t('카드 추가', 'Add Card') }}</h3>
+          <p class="mt-1 text-xs text-slate-400">{{ t('기본카드(코인브레이커 카드)와 같은 모양으로 새 카드를 만듭니다. 저장하면 바로 거래소 수익카드가 이 카드로 바뀝니다.', 'Creates a new card with the default (coin breaker) layout. Saving applies it to the exchange right away.') }}</p>
+          <label class="mt-4 flex flex-col gap-1 text-xs text-slate-400">
+            {{ t('카드 레이아웃 이름', 'Card name') }}
+            <input v-model="cardAddName" type="text" maxlength="30" class="rounded border border-white/10 bg-black/30 px-3 py-2 text-sm text-slate-100 outline-none focus:border-indigo-400/60" :placeholder="t('예: 이벤트 카드', 'e.g. Event card')" />
+          </label>
+          <div class="mt-3 flex flex-col gap-2 text-xs text-slate-400">
+            {{ t('배경 파일', 'Background file') }}
+            <div class="flex items-center gap-3">
+              <label class="cursor-pointer rounded bg-white/10 px-3 py-2 text-xs text-slate-200 hover:bg-white/15">
+                {{ cardAddBg ? t('배경 바꾸기', 'Change') : t('배경 파일 선택', 'Choose file') }}
+                <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" class="hidden" @change="onCardAddBg" />
+              </label>
+              <div v-if="cardAddBg" class="h-16 w-16 rounded border border-white/10 bg-cover bg-center" :style="{ backgroundImage: 'url(' + cardAddBg + ')' }" />
+              <span v-else class="text-slate-500">{{ t('선택 안 하면 기본 코인 배경', 'Default coin background if none') }}</span>
+            </div>
+          </div>
+          <p v-if="cardAddError" class="mt-3 text-xs text-rose-300">{{ cardAddError }}</p>
+          <div class="mt-5 flex justify-end gap-2">
+            <button type="button" class="rounded-md bg-white/5 px-4 py-2 text-sm text-slate-300 ring-1 ring-white/10 hover:bg-white/10" @click="cardAddOpen = false">{{ t('취소', 'Cancel') }}</button>
+            <button type="button" class="rounded-md bg-indigo-500 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-400 disabled:opacity-50" :disabled="profitCardSaving" @click="confirmCardAdd">{{ profitCardSaving ? t('저장 중…', 'Saving…') : t('저장', 'Save') }}</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- [카드관리] 창 -->
+      <div v-if="cardManageOpen" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4" @click.self="cardManageOpen = false">
+        <div class="w-full max-w-md rounded-2xl border border-white/10 bg-slate-900 p-5 shadow-2xl">
+          <h3 class="text-base font-semibold text-slate-100">{{ t('카드관리', 'Manage Cards') }}</h3>
+          <p class="mt-1 text-xs text-slate-400">{{ t('이름을 바꾸거나 카드를 삭제합니다. 거래소에서 쓰고 있는 카드를 삭제하면 다음 카드가 자동으로 선택됩니다. 기본카드는 삭제할 수 없습니다.', 'Rename or delete cards. If the card in use is deleted, the next card is selected automatically. The default card cannot be deleted.') }}</p>
+          <div class="mt-4 flex flex-col gap-2">
+            <div v-for="row in cardManageRows" :key="row.id" class="flex items-center gap-2" :class="row.deleted ? 'opacity-40' : ''">
+              <input v-model="row.name" type="text" maxlength="30" :disabled="row.deleted" class="min-w-0 flex-1 rounded border border-white/10 bg-black/30 px-3 py-2 text-sm text-slate-100 outline-none focus:border-indigo-400/60" />
+              <span v-if="row.id === profitCardSavedLayout" class="shrink-0 rounded bg-emerald-500/15 px-2 py-0.5 text-[11px] text-emerald-200">{{ t('사용 중', 'In use') }}</span>
+              <span v-if="row.id === 'breaker'" class="w-16 shrink-0 text-center text-[11px] text-slate-500">{{ t('삭제 불가', 'Locked') }}</span>
+              <button v-else-if="!row.deleted" type="button" class="w-16 shrink-0 rounded bg-rose-500/15 px-2 py-2 text-xs text-rose-200 ring-1 ring-rose-400/30 hover:bg-rose-500/25" @click="row.deleted = true">{{ t('삭제', 'Delete') }}</button>
+              <button v-else type="button" class="w-16 shrink-0 rounded bg-white/10 px-2 py-2 text-xs text-slate-200 hover:bg-white/15" @click="row.deleted = false">{{ t('되돌리기', 'Undo') }}</button>
+            </div>
+          </div>
+          <p v-if="cardManageError" class="mt-3 text-xs text-rose-300">{{ cardManageError }}</p>
+          <div class="mt-5 flex justify-end gap-2">
+            <button type="button" class="rounded-md bg-white/5 px-4 py-2 text-sm text-slate-300 ring-1 ring-white/10 hover:bg-white/10" @click="cardManageOpen = false">{{ t('취소', 'Cancel') }}</button>
+            <button type="button" class="rounded-md bg-indigo-500 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-400 disabled:opacity-50" :disabled="profitCardSaving" @click="confirmCardManage">{{ profitCardSaving ? t('저장 중…', 'Saving…') : t('저장', 'Save') }}</button>
+          </div>
+        </div>
       </div>
 
       <!-- 코인브레이커 카드 편집: coinbreaker3에 저장돼 있던 위치/폰트/배경 값으로 시작한다 -->
-      <div v-if="profitCardDraft.layout === 'breaker'" class="mt-4 grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+      <div v-if="isBreakerLayout" class="mt-4 grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
         <div class="flex flex-wrap items-start justify-center gap-8 rounded-xl border border-white/10 bg-black/20 p-6" @click="cbSelectCard">
           <div v-for="v in CB_PREVIEW_VARIANTS" :key="v.key" class="flex flex-col items-center gap-3">
             <p class="text-sm text-slate-400">{{ t(v.titleKo, v.titleEn) }}</p>
@@ -561,7 +612,7 @@
               editable
               :selected="cbSelected"
               :selected-sticker="cbSticker"
-              :cb="profitCardDraft.cb"
+              :cb="ecb"
               :roe="v.roe"
               :pnl="v.pnl"
               :won-number="v.won"
@@ -572,7 +623,7 @@
               :exit-text="v.exit"
               :positive-color="profitCardDraft.positiveColor"
               :negative-color="profitCardDraft.negativeColor"
-              :bg-image="profitCardDraft.bgImage"
+              :bg-image="ebg"
               @select="cbOnSelect"
               @edit="cbEditText"
               @sticker-select="cbOnStickerSelect"
@@ -631,42 +682,42 @@
             <label class="flex flex-col gap-1">
               <span class="text-xs text-slate-400">{{ t('어둡게 덮는 색', 'Darkness Color') }}</span>
               <span class="flex items-center gap-2">
-                <input v-model="profitCardDraft.cb.dimColor" type="color" class="h-8 w-10 cursor-pointer rounded border border-white/10 bg-transparent p-0" />
-                <input v-model="profitCardDraft.cb.dimColor" type="text" class="w-full rounded border border-white/10 bg-black/30 px-2 py-1 font-mono text-xs text-slate-200 outline-none focus:border-cyan-400/40" />
+                <input v-model="ecb.dimColor" type="color" class="h-8 w-10 cursor-pointer rounded border border-white/10 bg-transparent p-0" />
+                <input v-model="ecb.dimColor" type="text" class="w-full rounded border border-white/10 bg-black/30 px-2 py-1 font-mono text-xs text-slate-200 outline-none focus:border-cyan-400/40" />
               </span>
             </label>
 
             <label class="flex flex-col gap-1">
               <span class="text-xs text-slate-400">{{ t('그 위에 덮는 색 (코인브레이커 화면의 초록빛)', 'Tint Color (over the darkness)') }}</span>
               <span class="flex items-center gap-2">
-                <input v-model="profitCardDraft.cb.tintColor" type="color" class="h-8 w-10 cursor-pointer rounded border border-white/10 bg-transparent p-0" />
-                <input v-model="profitCardDraft.cb.tintColor" type="text" class="w-full rounded border border-white/10 bg-black/30 px-2 py-1 font-mono text-xs text-slate-200 outline-none focus:border-cyan-400/40" />
+                <input v-model="ecb.tintColor" type="color" class="h-8 w-10 cursor-pointer rounded border border-white/10 bg-transparent p-0" />
+                <input v-model="ecb.tintColor" type="text" class="w-full rounded border border-white/10 bg-black/30 px-2 py-1 font-mono text-xs text-slate-200 outline-none focus:border-cyan-400/40" />
               </span>
             </label>
             <div class="flex flex-col gap-1">
               <div class="flex items-center justify-between text-xs text-slate-400">
                 <span>{{ t('위에 덮는 색 불투명도', 'Tint Opacity') }}</span>
-                <span class="font-mono text-slate-300">{{ profitCardDraft.cb.tint }}%</span>
+                <span class="font-mono text-slate-300">{{ ecb.tint }}%</span>
               </div>
-              <input :value="profitCardDraft.cb.tint" type="range" min="0" max="100" step="1" class="w-full accent-indigo-400" @input="cbCardSet('tint', $event)" />
+              <input :value="ecb.tint" type="range" min="0" max="100" step="1" class="w-full accent-indigo-400" @input="cbCardSet('tint', $event)" />
             </div>
 
             <div class="flex flex-col gap-2 rounded-lg border border-white/10 bg-black/20 p-3">
               <div class="text-xs font-semibold text-slate-300">{{ t('배경 그림', 'Background Image') }}</div>
               <label class="flex items-center gap-2 text-xs text-slate-300">
-                <input v-model="profitCardDraft.cb.useDefaultBg" type="checkbox" class="h-4 w-4 accent-indigo-500" />
+                <input v-model="ecb.useDefaultBg" type="checkbox" class="h-4 w-4 accent-indigo-500" />
                 {{ t('기본 코인 배경 사용 (coinbreaker3 전체 이미지)', 'Use default coin background (full coin breaker image)') }}
               </label>
               <div class="flex flex-wrap items-center gap-2">
                 <label class="cursor-pointer rounded bg-white/10 px-3 py-1.5 text-xs text-slate-200 hover:bg-white/15">
-                  {{ profitCardDraft.bgImage ? t('내 그림 바꾸기', 'Change My Image') : t('내 그림 넣기', 'Add My Image') }}
+                  {{ ebg ? t('내 그림 바꾸기', 'Change My Image') : t('내 그림 넣기', 'Add My Image') }}
                   <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" class="hidden" @change="cbPickBgFile" />
                 </label>
                 <button
                   type="button"
                   class="rounded bg-rose-500/15 px-3 py-1.5 text-xs text-rose-200 ring-1 ring-rose-400/30 hover:bg-rose-500/25 disabled:cursor-not-allowed disabled:opacity-40"
-                  :disabled="!profitCardDraft.bgImage"
-                  @click="clearBgImage"
+                  :disabled="!ebg"
+                  @click="ebg = ''"
                 >
                   {{ t('내 그림 삭제', 'Remove My Image') }}
                 </button>
@@ -678,18 +729,18 @@
             <!-- 카드 위에 올리는 PNG 그림 -->
             <div class="flex flex-col gap-2 rounded-lg border border-white/10 bg-black/20 p-3">
               <div class="flex items-center justify-between">
-                <div class="text-xs font-semibold text-slate-300">{{ t('PNG 그림', 'PNG Images') }} <span class="font-normal text-slate-500">({{ profitCardDraft.cb.stickers.length }}/{{ CB_MAX_STICKERS }})</span></div>
+                <div class="text-xs font-semibold text-slate-300">{{ t('PNG 그림', 'PNG Images') }} <span class="font-normal text-slate-500">({{ ecb.stickers.length }}/{{ CB_MAX_STICKERS }})</span></div>
                 <label
                   class="rounded bg-indigo-500/20 px-3 py-1.5 text-xs text-indigo-100 ring-1 ring-indigo-400/40 hover:bg-indigo-500/30"
-                  :class="profitCardDraft.cb.stickers.length >= CB_MAX_STICKERS ? 'pointer-events-none opacity-40' : 'cursor-pointer'"
+                  :class="ecb.stickers.length >= CB_MAX_STICKERS ? 'pointer-events-none opacity-40' : 'cursor-pointer'"
                 >
                   {{ t('PNG 추가', 'Add PNG') }}
                   <input type="file" accept="image/png,image/webp" class="hidden" @change="cbAddSticker" />
                 </label>
               </div>
-              <div v-if="profitCardDraft.cb.stickers.length" class="flex flex-wrap gap-2">
+              <div v-if="ecb.stickers.length" class="flex flex-wrap gap-2">
                 <div
-                  v-for="(st, i) in profitCardDraft.cb.stickers"
+                  v-for="(st, i) in ecb.stickers"
                   :key="st.id"
                   class="relative flex h-14 w-14 cursor-pointer items-center justify-center rounded border bg-slate-800"
                   :class="cbSticker === st.id ? 'border-indigo-400 ring-1 ring-indigo-400' : 'border-white/10'"
@@ -711,7 +762,7 @@
               <div class="text-xs font-semibold text-slate-300">{{ t('글자 내용 (카드를 더블클릭해도 수정됩니다)', 'Text (double-click the card to edit)') }}</div>
               <label v-for="tk in cbTextKeys" :key="tk" class="flex flex-col gap-1 text-xs text-slate-400">
                 {{ t(CB_TEXT_LABELS[tk].ko, CB_TEXT_LABELS[tk].en) }}
-                <input :value="profitCardDraft.cb.texts[tk]" type="text" maxlength="30" class="rounded border border-white/10 bg-black/30 px-2 py-1 text-slate-200 outline-none" @input="cbEditText(tk, ($event.target as HTMLInputElement).value)" />
+                <input :value="ecb.texts[tk]" type="text" maxlength="30" class="rounded border border-white/10 bg-black/30 px-2 py-1 text-slate-200 outline-none" @input="cbEditText(tk, ($event.target as HTMLInputElement).value)" />
               </label>
               <p v-if="cbSelected === 'lev' || cbSelected === 'profit' || cbSelected === 'entry' || cbSelected === 'exit'" class="text-[11px] text-slate-500">{{ t('숫자는 실제 값으로 자동 입력되고, 여기서는 앞뒤 글자만 바꿉니다.', 'Numbers are filled in automatically; only the surrounding text is edited here.') }}</p>
             </div>
@@ -2122,8 +2173,11 @@ type ProfitCardStyle = {
   bgImageOpacity: number
   bgFilterColor: string
   bgFilterOpacity: number
-  layout: 'breaker' | 'ktx'
+  layout: string
   cb: CbConfig
+  cards: CustomCard[]
+  builtinNames: { breaker: string; ktx: string }
+  ktxHidden: boolean
   positiveColor: string
   negativeColor: string
   logoFontSize: number
@@ -2148,6 +2202,9 @@ type ProfitCardStyle = {
   statValueFontSize: number
   offsets: Record<string, { x: number; y: number; s?: number }>
 }
+// [카드 추가]로 만든 카드: 기본카드(코인브레이커) 모양에 자기만의 세부 설정(cb)과 배경 그림을 가진다.
+type CustomCard = { id: string; name: string; cb: CbConfig; bgImage: string }
+const PROFIT_CARD_MAX_CUSTOM = 5
 const DEFAULT_PROFIT_CARD_STYLE: ProfitCardStyle = {
   fontFamily: 'ui-sans-serif, system-ui, sans-serif',
   cardWidth: 340,
@@ -2165,6 +2222,9 @@ const DEFAULT_PROFIT_CARD_STYLE: ProfitCardStyle = {
   bgFilterOpacity: 0,
   layout: 'breaker',
   cb: resolveCb(null),
+  cards: [],
+  builtinNames: { breaker: '기본카드', ktx: '예전 KTX 카드' },
+  ktxHidden: false,
   positiveColor: '#22c55e',
   negativeColor: '#ef4444',
   logoFontSize: 16,
@@ -2405,14 +2465,19 @@ function clearBgImage() {
   bgImageError.value = null
 }
 async function onBgImageFile(e: Event) {
+  const out = await readCardBgFile(e, bgImageError)
+  if (out) profitCardDraft.bgImage = out
+}
+// 그림 파일을 작게 줄인 data URL로 읽는다(실패하면 errRef에 안내 문구, null 반환).
+async function readCardBgFile(e: Event, errRef: { value: string | null }): Promise<string | null> {
   const input = e.target as HTMLInputElement
   const file = input.files?.[0]
   input.value = ''
-  bgImageError.value = null
-  if (!file) return
+  errRef.value = null
+  if (!file) return null
   if (!file.type.startsWith('image/')) {
-    bgImageError.value = t('그림 파일만 넣을 수 있습니다.', 'Only image files are allowed.')
-    return
+    errRef.value = t('그림 파일만 넣을 수 있습니다.', 'Only image files are allowed.')
+    return null
   }
   try {
     const url = URL.createObjectURL(file)
@@ -2442,10 +2507,112 @@ async function onBgImageFile(e: Event) {
       quality = Math.max(0.5, quality - 0.1)
     }
     if (out.length > 390000) throw new Error('size')
-    profitCardDraft.bgImage = out
+    return out
   } catch {
-    bgImageError.value = t('그림을 불러오지 못했습니다. 다른 그림으로 시도해주세요.', 'Could not load that image. Please try another one.')
+    errRef.value = t('그림을 불러오지 못했습니다. 다른 그림으로 시도해주세요.', 'Could not load that image. Please try another one.')
+    return null
   }
+}
+
+// ───────── 카드 목록 / [카드 추가] / [카드관리] ─────────
+// 지금 편집 중인 카드: 만든 카드를 고르면 그 카드의 설정(cb)과 배경 그림을, 아니면 기본카드 설정을 편집한다.
+const activeCustomCard = computed(() => profitCardDraft.cards.find((c) => c.id === profitCardDraft.layout) || null)
+const isBreakerLayout = computed(() => profitCardDraft.layout === 'breaker' || !!activeCustomCard.value)
+const ecb = computed<CbConfig>(() => activeCustomCard.value?.cb || profitCardDraft.cb)
+const ebg = computed<string>({
+  get: () => (activeCustomCard.value ? activeCustomCard.value.bgImage : profitCardDraft.bgImage),
+  set: (v) => {
+    if (activeCustomCard.value) activeCustomCard.value.bgImage = v
+    else profitCardDraft.bgImage = v
+  }
+})
+const cardList = computed(() => {
+  const list: Array<{ id: string; name: string }> = [{ id: 'breaker', name: profitCardDraft.builtinNames.breaker || '기본카드' }]
+  if (!profitCardDraft.ktxHidden) list.push({ id: 'ktx', name: profitCardDraft.builtinNames.ktx || '예전 KTX 카드' })
+  for (const c of profitCardDraft.cards) list.push({ id: c.id, name: c.name })
+  return list
+})
+// 마지막으로 서버에 저장된(= 거래소에서 쓰고 있는) 카드
+const profitCardSavedLayout = ref('breaker')
+function selectCardLayout(id: string) {
+  profitCardDraft.layout = id
+  cbSelected.value = 'card'
+  cbSticker.value = null
+}
+
+const cardAddOpen = ref(false)
+const cardAddName = ref('')
+const cardAddBg = ref('')
+const cardAddError = ref<string | null>(null)
+function openCardAdd() {
+  cardAddName.value = ''
+  cardAddBg.value = ''
+  cardAddError.value = null
+  cardAddOpen.value = true
+}
+async function onCardAddBg(e: Event) {
+  const out = await readCardBgFile(e, cardAddError)
+  if (out) cardAddBg.value = out
+}
+// 기본카드의 지금 설정(위치/폰트/색)을 그대로 복사해서 새 카드를 만들고, 바로 선택해서 저장(= 거래소 적용)한다.
+async function confirmCardAdd() {
+  const name = cardAddName.value.trim()
+  if (!name) {
+    cardAddError.value = t('카드 이름을 입력해주세요.', 'Please enter a card name.')
+    return
+  }
+  if (profitCardDraft.cards.length >= PROFIT_CARD_MAX_CUSTOM) {
+    cardAddError.value = t(`카드는 최대 ${PROFIT_CARD_MAX_CUSTOM}개까지 만들 수 있습니다.`, `Up to ${PROFIT_CARD_MAX_CUSTOM} cards.`)
+    return
+  }
+  const cb = resolveCb(JSON.parse(JSON.stringify(profitCardDraft.cb)))
+  cb.stickers = []
+  cb.useDefaultBg = !cardAddBg.value
+  const id = 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6)
+  profitCardDraft.cards = [...profitCardDraft.cards, { id, name, cb, bgImage: cardAddBg.value }]
+  selectCardLayout(id)
+  const ok = await saveProfitCardStyle()
+  if (ok) cardAddOpen.value = false
+  else cardAddError.value = profitCardError.value
+}
+
+const cardManageOpen = ref(false)
+const cardManageRows = ref<Array<{ id: string; name: string; deleted: boolean }>>([])
+const cardManageError = ref<string | null>(null)
+function openCardManage() {
+  cardManageRows.value = cardList.value.map((c) => ({ id: c.id, name: c.name, deleted: false }))
+  cardManageError.value = null
+  cardManageOpen.value = true
+}
+// 이름 변경/삭제를 적용하고 바로 저장한다. 쓰고 있던(선택된) 카드가 지워지면 그 다음 카드(없으면 앞 카드)를 고른다.
+async function confirmCardManage() {
+  const rows = cardManageRows.value
+  if (rows.some((r) => !r.deleted && !r.name.trim())) {
+    cardManageError.value = t('카드 이름을 입력해주세요.', 'Please enter a card name.')
+    return
+  }
+  const alive = (id: string) => rows.some((r) => r.id === id && !r.deleted)
+  let layout = profitCardDraft.layout
+  if (!alive(layout)) {
+    const i = rows.findIndex((r) => r.id === layout)
+    const after = rows.slice(i + 1).find((r) => !r.deleted)
+    const before = rows.slice(0, Math.max(0, i)).reverse().find((r) => !r.deleted)
+    layout = (after || before || { id: 'breaker' }).id
+  }
+  for (const r of rows) {
+    if (r.id === 'breaker') profitCardDraft.builtinNames.breaker = r.name.trim()
+    else if (r.id === 'ktx') {
+      profitCardDraft.builtinNames.ktx = r.name.trim()
+      if (r.deleted) profitCardDraft.ktxHidden = true
+    }
+  }
+  profitCardDraft.cards = profitCardDraft.cards
+    .filter((c) => alive(c.id))
+    .map((c) => ({ ...c, name: (rows.find((r) => r.id === c.id)?.name || c.name).trim() }))
+  selectCardLayout(layout)
+  const ok = await saveProfitCardStyle()
+  if (ok) cardManageOpen.value = false
+  else cardManageError.value = profitCardError.value
 }
 
 // ───────── 코인브레이커 레이아웃 편집 ─────────
@@ -2455,10 +2622,10 @@ const CB_PREVIEW_VARIANTS = [
 ]
 const cbSelected = ref<CbItemKey | 'card'>('card')
 const cbStep = ref(1)
-const cbItem = computed(() => (cbSelected.value === 'card' ? null : profitCardDraft.cb.items[cbSelected.value]))
+const cbItem = computed(() => (cbSelected.value === 'card' ? null : ecb.value.items[cbSelected.value]))
 const cbTitle = computed(() => {
   if (cbSelected.value === 'card') {
-    const i = profitCardDraft.cb.stickers.findIndex((x) => x.id === cbSticker.value)
+    const i = ecb.value.stickers.findIndex((x) => x.id === cbSticker.value)
     return i >= 0 ? `${t('카드 전체', 'Whole Card')} · PNG ${i + 1}` : t('카드 전체', 'Whole Card')
   }
   return t(CB_ITEM_LABELS[cbSelected.value].ko, CB_ITEM_LABELS[cbSelected.value].en)
@@ -2469,7 +2636,7 @@ const cbMenuOptions = computed(() => {
   const list: Array<{ key: string; label: string; active: boolean; indent?: boolean }> = [
     { key: 'card', label: t('카드 전체', 'Whole Card'), active: cbSelected.value === 'card' && !cbSticker.value }
   ]
-  profitCardDraft.cb.stickers.forEach((st, i) => {
+  ecb.value.stickers.forEach((st, i) => {
     list.push({ key: 'sticker:' + st.id, label: 'PNG ' + (i + 1), active: cbSticker.value === st.id, indent: true })
   })
   for (const k of CB_ITEM_KEYS) {
@@ -2496,7 +2663,7 @@ const cbKind = computed<'card' | 'close' | 'divider' | 'sideBox' | 'text'>(() =>
 })
 // 카드 글자 내용 수정(더블클릭 또는 오른쪽 입력칸)
 function cbEditText(key: CbTextKey, value: string) {
-  profitCardDraft.cb.texts[key] = value
+  ecb.value.texts[key] = value
 }
 const cbTextKeys = computed<CbTextKey[]>(() => {
   const k = cbSelected.value
@@ -2529,25 +2696,31 @@ function cbSetFont(v: string) {
 function cbResetItem() {
   const k = cbSelected.value
   if (k === 'card') return
-  profitCardDraft.cb.items[k] = JSON.parse(JSON.stringify(CB_DEFAULTS.items[k]))
+  ecb.value.items[k] = JSON.parse(JSON.stringify(CB_DEFAULTS.items[k]))
 }
 // 내 그림을 넣으면 기본 코인 배경을 끄고 그 그림을 쓴다.
 async function cbPickBgFile(e: Event) {
-  await onBgImageFile(e)
-  if (profitCardDraft.bgImage) profitCardDraft.cb.useDefaultBg = false
+  const out = await readCardBgFile(e, bgImageError)
+  if (!out) return
+  ebg.value = out
+  ecb.value.useDefaultBg = false
 }
 function cbCardVal(k: string) {
-  return (profitCardDraft.cb as any)[k]
+  return (ecb.value as any)[k]
 }
 function cbCardSet(k: string, e: Event) {
   const n = Number((e.target as HTMLInputElement).value)
-  if (Number.isFinite(n)) (profitCardDraft.cb as any)[k] = n
+  if (Number.isFinite(n)) (ecb.value as any)[k] = n
 }
 function cbResetAll() {
-  // 위치/폰트/배경 값만 처음으로 되돌리고, 올려둔 PNG 그림은 그대로 둔다.
-  const stickers = profitCardDraft.cb.stickers
-  profitCardDraft.cb = resolveCb(null)
-  profitCardDraft.cb.stickers = stickers
+  // 위치/폰트/배경 값만 처음으로 되돌리고, 올려둔 PNG 그림과 배경 그림 사용 여부는 그대로 둔다.
+  const cur = ecb.value
+  const next = resolveCb(null)
+  next.stickers = cur.stickers
+  if (activeCustomCard.value) {
+    next.useDefaultBg = cur.useDefaultBg
+    activeCustomCard.value.cb = next
+  } else profitCardDraft.cb = next
 }
 // ───────── 카드 위 PNG 그림(스티커) ─────────
 const cbSticker = ref<string | null>(null)
@@ -2565,11 +2738,11 @@ function cbOnStickerSelect(id: string) {
   cbSticker.value = id
 }
 function cbOnStickerChange(id: string, patch: { x: number; y: number; w: number; h: number }) {
-  const st = profitCardDraft.cb.stickers.find((x) => x.id === id)
+  const st = ecb.value.stickers.find((x) => x.id === id)
   if (st) Object.assign(st, patch)
 }
 function cbRemoveSticker(id: string) {
-  profitCardDraft.cb.stickers = profitCardDraft.cb.stickers.filter((x) => x.id !== id)
+  ecb.value.stickers = ecb.value.stickers.filter((x) => x.id !== id)
   if (cbSticker.value === id) cbSticker.value = null
 }
 // PNG는 투명 배경을 살리기 위해 PNG 그대로 두고, 너무 크면 줄여서(한 장 약 300KB 이하) 카드 가운데에 놓는다.
@@ -2579,7 +2752,7 @@ async function cbAddSticker(e: Event) {
   input.value = ''
   stickerError.value = null
   if (!file) return
-  if (profitCardDraft.cb.stickers.length >= CB_MAX_STICKERS) {
+  if (ecb.value.stickers.length >= CB_MAX_STICKERS) {
     stickerError.value = t(`PNG는 최대 ${CB_MAX_STICKERS}개까지 넣을 수 있습니다.`, `Up to ${CB_MAX_STICKERS} PNG images.`)
     return
   }
@@ -2611,7 +2784,7 @@ async function cbAddSticker(e: Event) {
       maxSide = Math.round(maxSide * 0.8)
     }
     if (out.length > CB_STICKER_MAX_LEN - 2000) throw new Error('size')
-    const cb = profitCardDraft.cb
+    const cb = ecb.value
     const ratio = img.naturalWidth / Math.max(1, img.naturalHeight)
     let w = Math.min(img.naturalWidth, Math.round(cb.cardW * 0.4))
     let h = Math.round(w / ratio)
@@ -2629,12 +2802,12 @@ async function cbAddSticker(e: Event) {
   }
 }
 function onCbKey(e: KeyboardEvent) {
-  if (activeTab.value !== 'profitCard' || profitCardDraft.layout !== 'breaker') return
+  if (activeTab.value !== 'profitCard' || !isBreakerLayout.value) return
   const el = e.target as HTMLElement | null
   if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable)) return
   // PNG 그림이 선택돼 있으면: Delete 삭제, 방향키 이동, Esc 선택 해제
   if (cbSticker.value) {
-    const st = profitCardDraft.cb.stickers.find((x) => x.id === cbSticker.value)
+    const st = ecb.value.stickers.find((x) => x.id === cbSticker.value)
     if (!st) {
       cbSticker.value = null
       return
@@ -2664,7 +2837,8 @@ onMounted(() => window.addEventListener('keydown', onCbKey))
 onBeforeUnmount(() => window.removeEventListener('keydown', onCbKey))
 
 function resetProfitCardStyle() {
-  Object.assign(profitCardDraft, DEFAULT_PROFIT_CARD_STYLE, { offsets: {}, cb: resolveCb(null) })
+  const keep = { cards: profitCardDraft.cards, builtinNames: { ...profitCardDraft.builtinNames }, ktxHidden: profitCardDraft.ktxHidden }
+  Object.assign(profitCardDraft, DEFAULT_PROFIT_CARD_STYLE, { offsets: {}, cb: resolveCb(null) }, keep)
   selectedOffsetKey.value = null
   cbSelected.value = 'card'
 }
@@ -2674,10 +2848,24 @@ async function saveProfitCardStyle() {
   profitCardError.value = null
   profitCardMsg.value = null
   try {
-    await $fetch('/api/admin/settings/misc', { method: 'POST', body: { profitCardStyle: { ...profitCardDraft, offsets: JSON.parse(JSON.stringify(profitCardDraft.offsets || {})), cb: JSON.parse(JSON.stringify(profitCardDraft.cb)) } } })
+    await $fetch('/api/admin/settings/misc', {
+      method: 'POST',
+      body: {
+        profitCardStyle: {
+          ...profitCardDraft,
+          offsets: JSON.parse(JSON.stringify(profitCardDraft.offsets || {})),
+          cb: JSON.parse(JSON.stringify(profitCardDraft.cb)),
+          cards: JSON.parse(JSON.stringify(profitCardDraft.cards)),
+          builtinNames: { ...profitCardDraft.builtinNames }
+        }
+      }
+    })
+    profitCardSavedLayout.value = profitCardDraft.layout
     profitCardMsg.value = t('저장되었습니다.', 'Saved.')
+    return true
   } catch (e: any) {
     profitCardError.value = e?.data?.statusMessage || t('저장 실패', 'Save failed')
+    return false
   } finally {
     profitCardSaving.value = false
   }
@@ -2752,7 +2940,15 @@ async function loadMiscSettings() {
       mainNavDraft.hidden = data.mainNavHidden.filter((k: string) => known.has(k as MainNavKey))
     }
     if (data.profitCardStyle && typeof data.profitCardStyle === 'object') {
-      Object.assign(profitCardDraft, DEFAULT_PROFIT_CARD_STYLE, data.profitCardStyle, { offsets: { ...(data.profitCardStyle.offsets || {}) }, cb: resolveCb((data.profitCardStyle as any).cb) })
+      const raw = data.profitCardStyle as any
+      Object.assign(profitCardDraft, DEFAULT_PROFIT_CARD_STYLE, raw, {
+        offsets: { ...(raw.offsets || {}) },
+        cb: resolveCb(raw.cb),
+        cards: (Array.isArray(raw.cards) ? raw.cards : []).map((c: any) => ({ id: String(c.id), name: String(c.name || ''), cb: resolveCb(c.cb), bgImage: String(c.bgImage || '') })),
+        builtinNames: { ...DEFAULT_PROFIT_CARD_STYLE.builtinNames, ...(raw.builtinNames || {}) },
+        ktxHidden: !!raw.ktxHidden
+      })
+      profitCardSavedLayout.value = profitCardDraft.layout
     }
   } catch {
     // 기본값 유지

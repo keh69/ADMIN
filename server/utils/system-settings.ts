@@ -157,8 +157,14 @@ export type ProfitCardStyle = {
   bgFilterColor: string
   bgFilterOpacity: number
   // 카드 레이아웃: 'breaker' = 코인브레이커 카드(coinbreaker3 값), 'ktx' = 예전 KTX 카드. cb는 코인브레이커 레이아웃의 세부 설정(글자 위치/크기/배경 등, 일부만 있어도 됨).
-  layout: 'breaker' | 'ktx'
+  // 'breaker' = 기본카드, 'ktx' = 예전 KTX 카드, 그 밖의 값('c…') = 어드민이 [카드 추가]로 만든 카드(cards의 id)
+  layout: string
   cb: Record<string, any>
+  // [카드 추가]로 만든 카드들: 기본카드(코인브레이커) 레이아웃에 각자의 세부 설정(cb)과 배경 그림을 가진다.
+  cards: ProfitCardCustom[]
+  // 기본 제공 카드 이름(기본카드/예전 KTX 카드)과, 예전 KTX 카드를 [카드관리]에서 삭제했는지
+  builtinNames: { breaker: string; ktx: string }
+  ktxHidden: boolean
   // 수익/손실 공통 강조색
   positiveColor: string
   negativeColor: string
@@ -190,6 +196,10 @@ export type ProfitCardStyle = {
   // 카드 안 각 항목의 위치 미세조정(px). 키는 PROFIT_CARD_OFFSET_KEYS, 값이 없으면 기본 위치.
   offsets: Record<string, { x: number; y: number; s?: number }>
 }
+
+export type ProfitCardCustom = { id: string; name: string; cb: Record<string, any>; bgImage: string }
+export const PROFIT_CARD_MAX_CUSTOM = 5
+export const PROFIT_CARD_DEFAULT_NAMES = { breaker: '기본카드', ktx: '예전 KTX 카드' }
 
 export const PROFIT_CARD_OFFSET_KEYS = [
   'logo',
@@ -235,6 +245,9 @@ export const DEFAULT_PROFIT_CARD_STYLE: ProfitCardStyle = {
   bgFilterColor: '#000000',
   bgFilterOpacity: 0,
   layout: 'breaker',
+  cards: [],
+  builtinNames: { ...PROFIT_CARD_DEFAULT_NAMES },
+  ktxHidden: false,
   cb: {},
   positiveColor: '#22c55e',
   negativeColor: '#ef4444',
@@ -261,7 +274,7 @@ export const DEFAULT_PROFIT_CARD_STYLE: ProfitCardStyle = {
   offsets: {}
 }
 
-type ProfitCardFieldDef = { kind: 'color' } | { kind: 'number'; min: number; max: number } | { kind: 'font' } | { kind: 'image' } | { kind: 'layout' } | { kind: 'cb' } | { kind: 'offsets' }
+type ProfitCardFieldDef = { kind: 'color' } | { kind: 'number'; min: number; max: number } | { kind: 'font' } | { kind: 'image' } | { kind: 'layout' } | { kind: 'cb' } | { kind: 'offsets' } | { kind: 'cards' } | { kind: 'names' } | { kind: 'bool' }
 
 const PROFIT_CARD_FIELD_DEFS: Record<keyof ProfitCardStyle, ProfitCardFieldDef> = {
   fontFamily: { kind: 'font' },
@@ -279,6 +292,9 @@ const PROFIT_CARD_FIELD_DEFS: Record<keyof ProfitCardStyle, ProfitCardFieldDef> 
   bgFilterColor: { kind: 'color' },
   bgFilterOpacity: { kind: 'number', min: 0, max: 100 },
   layout: { kind: 'layout' },
+  cards: { kind: 'cards' },
+  builtinNames: { kind: 'names' },
+  ktxHidden: { kind: 'bool' },
   cb: { kind: 'cb' },
   positiveColor: { kind: 'color' },
   negativeColor: { kind: 'color' },
@@ -417,7 +433,36 @@ function normalizeProfitCardStyle(raw: any, fallback: ProfitCardStyle = DEFAULT_
         else if (v.length <= 400000 && /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(v)) (next as any)[key] = v
       }
     } else if (def.kind === 'layout') {
-      if (v === 'breaker' || v === 'ktx') (next as any)[key] = v
+      if (v === 'breaker' || v === 'ktx' || (typeof v === 'string' && /^c[a-z0-9]{1,30}$/.test(v))) (next as any)[key] = v
+    } else if (def.kind === 'bool') {
+      if (typeof v === 'boolean') (next as any)[key] = v
+    } else if (def.kind === 'names') {
+      const cur = { ...PROFIT_CARD_DEFAULT_NAMES, ...((next as any)[key] || {}) }
+      if (v && typeof v === 'object') {
+        for (const k of ['breaker', 'ktx'] as const) {
+          const n = cleanCardName((v as any)[k])
+          if (n) cur[k] = n
+        }
+      }
+      ;(next as any)[key] = cur
+    } else if (def.kind === 'cards') {
+      // 만든 카드: 최대 5개, 카드마다 배경 그림 400KB, 전체 약 3MB까지(설정 한 행에 같이 저장되므로)
+      if (Array.isArray(v)) {
+        const list: ProfitCardCustom[] = []
+        let total = 0
+        for (const c of v.slice(0, PROFIT_CARD_MAX_CUSTOM)) {
+          if (!c || typeof c !== 'object') continue
+          const id = typeof c.id === 'string' && /^c[a-z0-9]{1,30}$/.test(c.id) ? c.id : ''
+          if (!id || list.some((x) => x.id === id)) continue
+          const bg = typeof c.bgImage === 'string' && c.bgImage.length <= 400000 && /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(c.bgImage) ? c.bgImage : ''
+          const card: ProfitCardCustom = { id, name: cleanCardName(c.name) || '새 카드', cb: sanitizeCb(c.cb), bgImage: bg }
+          const size = JSON.stringify(card).length
+          if (total + size > 3000000) break
+          total += size
+          list.push(card)
+        }
+        ;(next as any)[key] = list
+      }
     } else if (def.kind === 'cb') {
       if (v && typeof v === 'object') (next as any)[key] = sanitizeCb(v)
     } else if (def.kind === 'offsets') {
@@ -437,7 +482,23 @@ function normalizeProfitCardStyle(raw: any, fallback: ProfitCardStyle = DEFAULT_
       }
     }
   }
+  if (!Array.isArray(next.cards)) next.cards = []
+  const layoutOk = next.layout === 'breaker' || (next.layout === 'ktx' && !next.ktxHidden) || next.cards.some((c) => c.id === next.layout)
+  if (!layoutOk) next.layout = 'breaker'
   return next
+}
+
+function cleanCardName(v: any): string {
+  return typeof v === 'string' ? v.replace(/[\u0000-\u001f]/g, '').trim().slice(0, 30) : ''
+}
+
+// 거래소 화면에 보낼 카드: 지금 선택된 카드 하나만 골라 기본카드(breaker) 모양으로 펼친다(다른 카드들의 그림은 보내지 않음).
+export function resolveActiveProfitCard(style: ProfitCardStyle): ProfitCardStyle {
+  const base = { ...style, cards: [] as ProfitCardCustom[] }
+  if (style.layout === 'breaker' || style.layout === 'ktx') return base
+  const card = (style.cards || []).find((c) => c.id === style.layout)
+  if (!card) return { ...base, layout: 'breaker' }
+  return { ...base, layout: 'breaker', cb: card.cb, bgImage: card.bgImage }
 }
 
 export type SystemSettingsExtra = {
