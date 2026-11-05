@@ -110,7 +110,14 @@ export async function clearAuthSession(event: H3Event) {
 const SESSION_CACHE_TTL_MS = 20_000
 const sessionCache = new Map<string, { at: number; user: SessionUser }>()
 
+// 관리자 전용 사이트: 일반 회원(role 'user') 세션은 쿠키든 임퍼스네이션 헤더든 로그인으로 인정하지 않는다.
+// (그래서 회원은 ADMIN의 어떤 화면/API도 쓸 수 없다 — me도 null, requireUser/requireAdmin 모두 401)
 export async function getSessionUser(event: H3Event): Promise<SessionUser | null> {
+  const user = await getSessionUserAnyRole(event)
+  return user && user.role !== 'user' ? user : null
+}
+
+async function getSessionUserAnyRole(event: H3Event): Promise<SessionUser | null> {
   const token = getHeader(event, IMPERSONATE_HEADER) || getCookie(event, COOKIE_NAME)
   if (!token) return null
 
