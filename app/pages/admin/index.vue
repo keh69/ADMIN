@@ -554,12 +554,13 @@
 
       <!-- 코인브레이커 카드 편집: coinbreaker3에 저장돼 있던 위치/폰트/배경 값으로 시작한다 -->
       <div v-if="profitCardDraft.layout === 'breaker'" class="mt-4 grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
-        <div class="flex flex-wrap items-start justify-center gap-8 rounded-xl border border-white/10 bg-black/20 p-6" @click="cbSelected = 'card'">
+        <div class="flex flex-wrap items-start justify-center gap-8 rounded-xl border border-white/10 bg-black/20 p-6" @click="cbSelectCard">
           <div v-for="v in CB_PREVIEW_VARIANTS" :key="v.key" class="flex flex-col items-center gap-3">
             <p class="text-sm text-slate-400">{{ t(v.titleKo, v.titleEn) }}</p>
             <ProfitCardBreaker
               editable
               :selected="cbSelected"
+              :selected-sticker="cbSticker"
               :cb="profitCardDraft.cb"
               :roe="v.roe"
               :pnl="v.pnl"
@@ -572,8 +573,10 @@
               :positive-color="profitCardDraft.positiveColor"
               :negative-color="profitCardDraft.negativeColor"
               :bg-image="profitCardDraft.bgImage"
-              @select="cbSelected = $event"
+              @select="cbOnSelect"
               @edit="cbEditText"
+              @sticker-select="cbOnStickerSelect"
+              @sticker-change="cbOnStickerChange"
               @click.stop
             />
           </div>
@@ -648,6 +651,35 @@
               </div>
               <p class="text-[11px] text-slate-500">{{ t('기본 코인 배경을 끄면 내 그림이 깔립니다(그림을 넣으면 자동으로 꺼집니다). 어둡기 슬라이더로 글자가 잘 보이게 조절하세요.', 'Turn the default background off to show my image (adding an image turns it off automatically). Use the darkness slider to keep text readable.') }}</p>
               <p v-if="bgImageError" class="text-xs text-rose-300">{{ bgImageError }}</p>
+            </div>
+
+            <!-- 카드 위에 올리는 PNG 그림 -->
+            <div class="flex flex-col gap-2 rounded-lg border border-white/10 bg-black/20 p-3">
+              <div class="flex items-center justify-between">
+                <div class="text-xs font-semibold text-slate-300">{{ t('PNG 그림', 'PNG Images') }} <span class="font-normal text-slate-500">({{ profitCardDraft.cb.stickers.length }}/{{ CB_MAX_STICKERS }})</span></div>
+                <label
+                  class="rounded bg-indigo-500/20 px-3 py-1.5 text-xs text-indigo-100 ring-1 ring-indigo-400/40 hover:bg-indigo-500/30"
+                  :class="profitCardDraft.cb.stickers.length >= CB_MAX_STICKERS ? 'pointer-events-none opacity-40' : 'cursor-pointer'"
+                >
+                  {{ t('PNG 추가', 'Add PNG') }}
+                  <input type="file" accept="image/png,image/webp" class="hidden" @change="cbAddSticker" />
+                </label>
+              </div>
+              <div v-if="profitCardDraft.cb.stickers.length" class="flex flex-wrap gap-2">
+                <div
+                  v-for="(st, i) in profitCardDraft.cb.stickers"
+                  :key="st.id"
+                  class="relative flex h-14 w-14 cursor-pointer items-center justify-center rounded border bg-slate-800"
+                  :class="cbSticker === st.id ? 'border-indigo-400 ring-1 ring-indigo-400' : 'border-white/10'"
+                  :title="'PNG ' + (i + 1)"
+                  @click.stop="cbOnStickerSelect(st.id)"
+                >
+                  <img :src="st.src" alt="" class="max-h-full max-w-full object-contain" />
+                  <button type="button" class="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-rose-500 text-[11px] leading-none text-white hover:bg-rose-400" :title="t('삭제', 'Delete')" @click.stop="cbRemoveSticker(st.id)">✕</button>
+                </div>
+              </div>
+              <p class="text-[11px] text-slate-500">{{ t('카드에서 PNG를 클릭해 선택한 뒤 끌어서 위치를 옮기고, 점선 박스의 점을 끌어 크기를 조절합니다(모서리 점은 비율 유지, Shift를 누르면 자유롭게). 선택한 상태에서 Delete 키를 누르면 삭제, 방향키로 1px(Shift 10px)씩 이동합니다.', 'Click a PNG on the card to select it, drag to move, and drag the dots of the dashed box to resize (corners keep the ratio, hold Shift for free resize). Press Delete to remove it; arrow keys move it 1px (Shift: 10px).') }}</p>
+              <p v-if="stickerError" class="text-xs text-rose-300">{{ stickerError }}</p>
             </div>
           </template>
 
@@ -1330,7 +1362,7 @@
 </template>
 
 <script setup lang="ts">
-import { resolveCb, cbTextKeyFor, CB_ITEM_LABELS, CB_TEXT_LABELS, CB_FONT_OPTIONS, CB_DEFAULTS, type CbConfig, type CbItemKey, type CbTextKey } from '~/utils/cardBreaker'
+import { resolveCb, cbTextKeyFor, CB_MAX_STICKERS, CB_STICKER_MAX_LEN, CB_ITEM_LABELS, CB_TEXT_LABELS, CB_FONT_OPTIONS, CB_DEFAULTS, type CbConfig, type CbItemKey, type CbTextKey } from '~/utils/cardBreaker'
 definePageMeta({ middleware: ['admin', 'super-admin'] })
 const { t, locale } = useLocale()
 const { me, refresh } = useMe()
@@ -2459,12 +2491,113 @@ function cbCardSet(k: string, e: Event) {
   if (Number.isFinite(n)) (profitCardDraft.cb as any)[k] = n
 }
 function cbResetAll() {
+  // 위치/폰트/배경 값만 처음으로 되돌리고, 올려둔 PNG 그림은 그대로 둔다.
+  const stickers = profitCardDraft.cb.stickers
   profitCardDraft.cb = resolveCb(null)
+  profitCardDraft.cb.stickers = stickers
+}
+// ───────── 카드 위 PNG 그림(스티커) ─────────
+const cbSticker = ref<string | null>(null)
+const stickerError = ref<string | null>(null)
+function cbSelectCard() {
+  cbSelected.value = 'card'
+  cbSticker.value = null
+}
+function cbOnSelect(key: CbItemKey | 'card') {
+  cbSelected.value = key
+  cbSticker.value = null
+}
+function cbOnStickerSelect(id: string) {
+  cbSelected.value = 'card'
+  cbSticker.value = id
+}
+function cbOnStickerChange(id: string, patch: { x: number; y: number; w: number; h: number }) {
+  const st = profitCardDraft.cb.stickers.find((x) => x.id === id)
+  if (st) Object.assign(st, patch)
+}
+function cbRemoveSticker(id: string) {
+  profitCardDraft.cb.stickers = profitCardDraft.cb.stickers.filter((x) => x.id !== id)
+  if (cbSticker.value === id) cbSticker.value = null
+}
+// PNG는 투명 배경을 살리기 위해 PNG 그대로 두고, 너무 크면 줄여서(한 장 약 300KB 이하) 카드 가운데에 놓는다.
+async function cbAddSticker(e: Event) {
+  const input = e.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = ''
+  stickerError.value = null
+  if (!file) return
+  if (profitCardDraft.cb.stickers.length >= CB_MAX_STICKERS) {
+    stickerError.value = t(`PNG는 최대 ${CB_MAX_STICKERS}개까지 넣을 수 있습니다.`, `Up to ${CB_MAX_STICKERS} PNG images.`)
+    return
+  }
+  if (!/^image\/(png|webp)$/.test(file.type)) {
+    stickerError.value = t('PNG 파일만 넣을 수 있습니다.', 'Only PNG files are allowed.')
+    return
+  }
+  try {
+    const url = URL.createObjectURL(file)
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const el = new Image()
+      el.onload = () => resolve(el)
+      el.onerror = () => reject(new Error('load'))
+      el.src = url
+    })
+    URL.revokeObjectURL(url)
+    let maxSide = 800
+    let out = ''
+    for (let i = 0; i < 10; i++) {
+      const scale = Math.min(1, maxSide / Math.max(img.naturalWidth, img.naturalHeight))
+      const canvas = document.createElement('canvas')
+      canvas.width = Math.max(1, Math.round(img.naturalWidth * scale))
+      canvas.height = Math.max(1, Math.round(img.naturalHeight * scale))
+      const ctx = canvas.getContext('2d')
+      if (!ctx) throw new Error('canvas')
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+      out = canvas.toDataURL('image/png')
+      if (out.length <= CB_STICKER_MAX_LEN - 2000) break
+      maxSide = Math.round(maxSide * 0.8)
+    }
+    if (out.length > CB_STICKER_MAX_LEN - 2000) throw new Error('size')
+    const cb = profitCardDraft.cb
+    const ratio = img.naturalWidth / Math.max(1, img.naturalHeight)
+    let w = Math.min(img.naturalWidth, Math.round(cb.cardW * 0.4))
+    let h = Math.round(w / ratio)
+    if (h > cb.cardH * 0.6) {
+      h = Math.round(cb.cardH * 0.6)
+      w = Math.round(h * ratio)
+    }
+    w = Math.max(8, w)
+    h = Math.max(8, h)
+    const id = 'st' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6)
+    cb.stickers = [...cb.stickers, { id, src: out, x: Math.round((cb.cardW - w) / 2), y: Math.round((cb.cardH - h) / 2), w, h }]
+    cbOnStickerSelect(id)
+  } catch {
+    stickerError.value = t('PNG를 불러오지 못했습니다. 더 작은 그림으로 시도해주세요.', 'Could not load that PNG. Please try a smaller image.')
+  }
 }
 function onCbKey(e: KeyboardEvent) {
-  if (activeTab.value !== 'profitCard' || profitCardDraft.layout !== 'breaker' || cbSelected.value === 'card') return
+  if (activeTab.value !== 'profitCard' || profitCardDraft.layout !== 'breaker') return
   const el = e.target as HTMLElement | null
-  if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT')) return
+  if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable)) return
+  // PNG 그림이 선택돼 있으면: Delete 삭제, 방향키 이동, Esc 선택 해제
+  if (cbSticker.value) {
+    const st = profitCardDraft.cb.stickers.find((x) => x.id === cbSticker.value)
+    if (!st) {
+      cbSticker.value = null
+      return
+    }
+    const big = e.shiftKey ? 10 : 1
+    if (e.key === 'Delete' || e.key === 'Backspace') cbRemoveSticker(st.id)
+    else if (e.key === 'ArrowUp') st.y -= big
+    else if (e.key === 'ArrowDown') st.y += big
+    else if (e.key === 'ArrowLeft') st.x -= big
+    else if (e.key === 'ArrowRight') st.x += big
+    else if (e.key === 'Escape') cbSticker.value = null
+    else return
+    e.preventDefault()
+    return
+  }
+  if (cbSelected.value === 'card') return
   const big = e.shiftKey ? 10 : 1
   if (e.key === 'ArrowUp') cbNudge(0, -big)
   else if (e.key === 'ArrowDown') cbNudge(0, big)

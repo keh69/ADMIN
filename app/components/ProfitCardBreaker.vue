@@ -4,6 +4,21 @@
       <div class="cbk-card" :class="{ 'cbk-editable': editable }" :style="cardStyle" @click="emit('select', 'card')">
         <div class="cbk-dim" :style="{ backgroundColor: cb.dimColor, opacity: cb.dim / 100 }" />
         <div class="cbk-tint" :style="{ backgroundColor: cb.tintColor, opacity: cb.tint / 100 }" />
+        <!-- 카드 위에 올린 PNG 그림: 편집 화면에서는 끌어서 이동, 점선 박스의 점으로 크기 조절 -->
+        <div
+          v-for="st in stickers"
+          :key="st.id"
+          class="cbk-sticker"
+          :class="{ 'cbk-sticker-edit': editable, 'cbk-sticker-on': editable && selectedSticker === st.id }"
+          :style="{ left: st.x + 'px', top: st.y + 'px', width: st.w + 'px', height: st.h + 'px' }"
+          @pointerdown.stop="onStickerDown($event, st, 'move')"
+          @click.stop
+        >
+          <img :src="st.src" alt="" draggable="false" class="cbk-sticker-img" />
+          <template v-if="editable && selectedSticker === st.id">
+            <span v-for="h in STICKER_HANDLES" :key="h" class="cbk-h" :class="'cbk-h-' + h" @pointerdown.stop="onStickerDown($event, st, h)" />
+          </template>
+        </div>
         <div class="cbk-content">
           <div class="cbk-header">
             <div class="cbk-title" :class="pickClass()" :style="itemStyle('title', { outline: outlineFor('title'), outlineOffset: '3px' })" @click.stop="pick('title')" @dblclick.stop="startEdit('title')">
@@ -84,7 +99,7 @@
 </template>
 
 <script setup lang="ts">
-import { CB_DEFAULT_BG, cbTextKeyFor, hexToRgbTriplet, type CbConfig, type CbItemKey, type CbTextKey } from '~/utils/cardBreaker'
+import { CB_DEFAULT_BG, cbTextKeyFor, hexToRgbTriplet, type CbConfig, type CbItemKey, type CbSticker, type CbTextKey } from '~/utils/cardBreaker'
 
 // 수익카드(청산카드) 코인브레이커 레이아웃. 거래소(KTX) 수익카드와 어드민 "카드 디자인" 미리보기가 이 컴포넌트 하나로 그려서 항상 같은 모양이 된다.
 // 카드 안의 글자(제목/라벨/롱·숏/단위)는 설정(cb.texts)의 글자가 거래소 언어와 상관없이 그대로 나온다.
@@ -105,6 +120,7 @@ const props = withDefaults(
     bgImage?: string
     editable?: boolean
     selected?: string | null
+    selectedSticker?: string | null
     fit?: boolean
   }>(),
   {
@@ -113,6 +129,7 @@ const props = withDefaults(
     bgImage: '',
     editable: false,
     selected: null,
+    selectedSticker: null,
     fit: false
   }
 )
@@ -120,7 +137,64 @@ const emit = defineEmits<{
   (e: 'select', key: CbItemKey | 'card'): void
   (e: 'close'): void
   (e: 'edit', key: CbTextKey, value: string): void
+  (e: 'sticker-select', id: string): void
+  (e: 'sticker-change', id: string, patch: { x: number; y: number; w: number; h: number }): void
 }>()
+
+// ───────── PNG 그림(스티커) 이동/크기 조절 ─────────
+// 가운데를 끌면 이동, 모서리 점은 비율 유지(Shift를 누르면 자유롭게), 변의 점은 가로 또는 세로만 조절.
+const STICKER_HANDLES = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'] as const
+type StickerMode = 'move' | (typeof STICKER_HANDLES)[number]
+const stickers = computed<CbSticker[]>(() => (Array.isArray(props.cb.stickers) ? props.cb.stickers : []))
+let drag: { id: string; mode: StickerMode; sx: number; sy: number; x: number; y: number; w: number; h: number } | null = null
+function onStickerDown(e: PointerEvent, st: CbSticker, mode: StickerMode) {
+  if (!props.editable || e.button !== 0) return
+  e.preventDefault()
+  emit('sticker-select', st.id)
+  drag = { id: st.id, mode, sx: e.clientX, sy: e.clientY, x: st.x, y: st.y, w: st.w, h: st.h }
+  window.addEventListener('pointermove', onStickerMove)
+  window.addEventListener('pointerup', onStickerUp)
+  window.addEventListener('pointercancel', onStickerUp)
+}
+function onStickerMove(e: PointerEvent) {
+  const d = drag
+  if (!d) return
+  const k = scale.value || 1
+  const dx = (e.clientX - d.sx) / k
+  const dy = (e.clientY - d.sy) / k
+  let { x, y, w, h } = d
+  if (d.mode === 'move') {
+    x += dx
+    y += dy
+  } else {
+    const m = d.mode
+    let nw = w
+    let nh = h
+    if (m.includes('e')) nw = w + dx
+    if (m.includes('w')) nw = w - dx
+    if (m.includes('s')) nh = h + dy
+    if (m.includes('n')) nh = h - dy
+    if (m.length === 2 && !e.shiftKey) {
+      const ratio = w / h
+      if (Math.abs(nw / w - 1) >= Math.abs(nh / h - 1)) nh = nw / ratio
+      else nw = nh * ratio
+    }
+    nw = Math.max(8, nw)
+    nh = Math.max(8, nh)
+    if (m.includes('w')) x = d.x + (w - nw)
+    if (m.includes('n')) y = d.y + (h - nh)
+    w = nw
+    h = nh
+  }
+  emit('sticker-change', d.id, { x: Math.round(x), y: Math.round(y), w: Math.round(w), h: Math.round(h) })
+}
+function onStickerUp() {
+  drag = null
+  window.removeEventListener('pointermove', onStickerMove)
+  window.removeEventListener('pointerup', onStickerUp)
+  window.removeEventListener('pointercancel', onStickerUp)
+}
+onBeforeUnmount(onStickerUp)
 
 const scale = ref(1)
 function updateScale() {
@@ -300,6 +374,8 @@ function onCloseClick() {
 .cbk-content {
   position: relative;
   z-index: 10;
+  /* 빈 곳 클릭은 아래의 PNG 그림/카드로 통과시키고, 글자(편집 가능한 항목)만 클릭을 받는다 */
+  pointer-events: none;
   width: 100%;
   height: 100%;
   display: flex;
@@ -434,6 +510,52 @@ function onCloseClick() {
 .cbk-close:hover {
   opacity: 1;
 }
+.cbk-content .cbk-pick,
+.cbk-content .cbk-edit {
+  pointer-events: auto;
+}
+.cbk-sticker {
+  position: absolute;
+  z-index: 5;
+  pointer-events: none;
+  user-select: none;
+}
+.cbk-sticker-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  pointer-events: none;
+}
+.cbk-sticker-edit {
+  pointer-events: auto;
+  cursor: move;
+  touch-action: none;
+}
+.cbk-sticker-edit:hover {
+  outline: 1px dashed #818cf8;
+}
+.cbk-sticker-on {
+  z-index: 30;
+  outline: 1px dashed #ffffff;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6);
+}
+.cbk-h {
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  background: #ffffff;
+  border: 1px solid #111827;
+  touch-action: none;
+}
+.cbk-h-nw { left: -5px; top: -5px; cursor: nwse-resize; }
+.cbk-h-n { left: calc(50% - 5px); top: -5px; cursor: ns-resize; }
+.cbk-h-ne { right: -5px; top: -5px; cursor: nesw-resize; }
+.cbk-h-e { right: -5px; top: calc(50% - 5px); cursor: ew-resize; }
+.cbk-h-se { right: -5px; bottom: -5px; cursor: nwse-resize; }
+.cbk-h-s { left: calc(50% - 5px); bottom: -5px; cursor: ns-resize; }
+.cbk-h-sw { left: -5px; bottom: -5px; cursor: nesw-resize; }
+.cbk-h-w { left: -5px; top: calc(50% - 5px); cursor: ew-resize; }
 .cbk-editable {
   cursor: pointer;
 }

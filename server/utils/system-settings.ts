@@ -348,6 +348,28 @@ function sanitizeCb(raw: any): Record<string, any> {
     }
   }
   if (typeof raw.useDefaultBg === 'boolean') out.useDefaultBg = raw.useDefaultBg
+  // 카드 위에 올리는 PNG 그림: 최대 6개, 한 장 300KB, 합계 1.2MB까지. png/webp data URL만 허용.
+  if (Array.isArray(raw.stickers)) {
+    const list: Array<Record<string, any>> = []
+    let total = 0
+    for (const s of raw.stickers.slice(0, 6)) {
+      if (!s || typeof s !== 'object') continue
+      const src = typeof s.src === 'string' ? s.src : ''
+      if (!src || src.length > 300000 || !/^data:image\/(png|webp);base64,[A-Za-z0-9+/=]+$/.test(src)) continue
+      if (total + src.length > 1200000) break
+      total += src.length
+      const id = String(s.id || '').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 40) || 'st' + list.length
+      list.push({
+        id,
+        src,
+        x: Math.round(cbNum(s.x, -1000, 1000) ?? 0),
+        y: Math.round(cbNum(s.y, -1000, 1000) ?? 0),
+        w: Math.round(cbNum(s.w, 4, 1500) ?? 100),
+        h: Math.round(cbNum(s.h, 4, 1500) ?? 100)
+      })
+    }
+    out.stickers = list
+  }
   if (raw.items && typeof raw.items === 'object') {
     out.items = {}
     for (const key of CB_ITEM_KEYS) {

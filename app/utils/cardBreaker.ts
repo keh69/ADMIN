@@ -50,6 +50,19 @@ export type CbTexts = {
 }
 export type CbTextKey = keyof CbTexts
 
+// 카드 위에 올리는 PNG 그림(스티커). x,y = 카드 왼쪽 위 기준 위치(px), w,h = 크기(px). src = PNG data URL.
+export type CbSticker = {
+  id: string
+  src: string
+  x: number
+  y: number
+  w: number
+  h: number
+}
+// PNG 그림은 최대 6개, 한 장당 약 300KB까지(설정 한 행에 같이 저장되므로 작게 유지)
+export const CB_MAX_STICKERS = 6
+export const CB_STICKER_MAX_LEN = 300000
+
 export type CbConfig = {
   cardW: number
   cardH: number
@@ -68,6 +81,7 @@ export type CbConfig = {
   useDefaultBg: boolean
   texts: CbTexts
   items: Record<CbItemKey, CbItem>
+  stickers: CbSticker[]
 }
 
 export const CB_ITEM_KEYS: CbItemKey[] = [
@@ -206,7 +220,8 @@ export const CB_DEFAULTS: CbConfig = {
     entry: { x: 4, y: -24, tracking: 0.5 },
     lblExit: { x: 1, y: -30 },
     exit: { x: 4, y: -25, tracking: 0 }
-  }
+  },
+  stickers: []
 }
 
 // 저장된 값(일부만 있어도 됨)을 기본값 위에 얹어 항상 완전한 설정으로 만든다.
@@ -223,6 +238,19 @@ export function resolveCb(raw: any): CbConfig {
     for (const k of Object.keys(base.texts) as CbTextKey[]) {
       if (typeof raw.texts[k] === 'string') base.texts[k] = raw.texts[k]
     }
+  }
+  if (Array.isArray(raw.stickers)) {
+    base.stickers = raw.stickers
+      .filter((st: any) => st && typeof st === 'object' && typeof st.src === 'string' && st.src.startsWith('data:image/'))
+      .slice(0, CB_MAX_STICKERS)
+      .map((st: any, i: number) => ({
+        id: typeof st.id === 'string' && st.id ? st.id : 'st' + i,
+        src: st.src,
+        x: Number(st.x) || 0,
+        y: Number(st.y) || 0,
+        w: Math.max(4, Number(st.w) || 100),
+        h: Math.max(4, Number(st.h) || 100)
+      }))
   }
   const items = raw.items && typeof raw.items === 'object' ? raw.items : {}
   for (const key of CB_ITEM_KEYS) {
