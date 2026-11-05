@@ -147,9 +147,9 @@
 
 <script setup lang="ts">
 const config = useRuntimeConfig()
-const memberSiteUrl = String(config.public.memberSiteUrl || 'https://bitduck.vercel.app').replace(/\/+$/, '')
+const memberSiteUrl = String(config.public.memberSiteUrl || 'https://ktxexchange.com').replace(/\/+$/, '')
 const stagingSiteUrl = String(config.public.stagingSiteUrl || '').replace(/\/+$/, '')
-// KTX 사이트 = 기존 빗타이거 주소(없으면 회원 사이트 주소)
+// KTX 사이트 주소 (없으면 회원 사이트 주소)
 const ktxSiteUrl = stagingSiteUrl || memberSiteUrl
 const { data: versionData } = await useFetch<{ date: string; build: number }>('/api/version', { key: 'app-version' })
 const route = useRoute()

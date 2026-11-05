@@ -1616,7 +1616,7 @@ async function loginAsUser(userId: number) {
       if (res?.token) {
         // 관리자 사이트에는 회원 화면이 없으므로, 회원용 사이트(KTX)의 임퍼스네이션 주소로 새 창을 연다.
         const pub = useRuntimeConfig().public
-        const memberSite = String(pub.stagingSiteUrl || pub.memberSiteUrl || 'https://bittigers.vercel.app').replace(/\/+$/, '')
+        const memberSite = String(pub.stagingSiteUrl || pub.memberSiteUrl || 'https://ktxexchange.com').replace(/\/+$/, '')
         win.location.href = `${memberSite}/impersonate?token=${encodeURIComponent(res.token)}`
       } else {
         win.close()

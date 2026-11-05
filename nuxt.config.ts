@@ -58,9 +58,9 @@ export default defineNuxtConfig({
     public: {
       appName: 'ADMIN',
       // 관리자 화면에서 "회원으로 로그인", 추천가입링크, 사이트 바로가기가 가리킬 회원용 사이트 주소.
-      memberSiteUrl: process.env.NUXT_PUBLIC_MEMBER_SITE_URL || 'https://bitduck.vercel.app',
-      // (선택) 빗타이거(테스트/백업) 사이트 바로가기. 비워두면 메뉴에 안 나옴.
-      stagingSiteUrl: process.env.NUXT_PUBLIC_STAGING_SITE_URL || 'https://bittigers.vercel.app'
+      memberSiteUrl: process.env.NUXT_PUBLIC_MEMBER_SITE_URL || 'https://ktxexchange.com',
+      // KTX 사이트 바로가기 주소 (기본값 ktxexchange.com).
+      stagingSiteUrl: process.env.NUXT_PUBLIC_STAGING_SITE_URL || 'https://ktxexchange.com'
     }
   }
 })
