@@ -586,7 +586,29 @@
         </div>
 
         <div class="flex flex-col gap-3 rounded-xl border border-white/10 bg-black/20 p-4 lg:sticky lg:top-4 lg:self-start">
-          <div class="text-sm font-semibold text-indigo-300">{{ cbTitle }}</div>
+          <!-- 편집할 대상 선택: 누르면 카드 전체/각 글자·요소/PNG 목록이 드롭다운으로 내려온다 -->
+          <div class="relative">
+            <button
+              type="button"
+              class="flex w-full items-center justify-between rounded-lg border border-indigo-400/30 bg-indigo-500/10 px-3 py-2 text-left text-sm font-semibold text-indigo-200 hover:bg-indigo-500/20"
+              @click.stop="cbMenuOpen = !cbMenuOpen"
+            >
+              <span>{{ cbTitle }}</span>
+              <span class="text-xs text-indigo-300 transition-transform" :class="cbMenuOpen ? 'rotate-180' : ''">▼</span>
+            </button>
+            <div v-if="cbMenuOpen" class="absolute left-0 right-0 top-full z-50 mt-1 max-h-80 overflow-y-auto rounded-lg border border-white/10 bg-slate-900 py-1 shadow-xl" @click.stop>
+              <button
+                v-for="o in cbMenuOptions"
+                :key="o.key"
+                type="button"
+                class="block w-full px-3 py-1.5 text-left text-sm hover:bg-white/10"
+                :class="[o.active ? 'bg-indigo-500/20 text-indigo-100' : 'text-slate-200', o.indent ? 'pl-6' : '']"
+                @click="cbPickMenu(o.key)"
+              >
+                {{ o.label }}
+              </button>
+            </div>
+          </div>
 
           <!-- 카드 전체 설정: 크기/모서리/배경/어둡기 -->
           <template v-if="cbKind === 'card'">
@@ -1362,7 +1384,7 @@
 </template>
 
 <script setup lang="ts">
-import { resolveCb, cbTextKeyFor, CB_MAX_STICKERS, CB_STICKER_MAX_LEN, CB_ITEM_LABELS, CB_TEXT_LABELS, CB_FONT_OPTIONS, CB_DEFAULTS, type CbConfig, type CbItemKey, type CbTextKey } from '~/utils/cardBreaker'
+import { resolveCb, cbTextKeyFor, CB_ITEM_KEYS, CB_MAX_STICKERS, CB_STICKER_MAX_LEN, CB_ITEM_LABELS, CB_TEXT_LABELS, CB_FONT_OPTIONS, CB_DEFAULTS, type CbConfig, type CbItemKey, type CbTextKey } from '~/utils/cardBreaker'
 definePageMeta({ middleware: ['admin', 'super-admin'] })
 const { t, locale } = useLocale()
 const { me, refresh } = useMe()
@@ -2434,7 +2456,38 @@ const CB_PREVIEW_VARIANTS = [
 const cbSelected = ref<CbItemKey | 'card'>('card')
 const cbStep = ref(1)
 const cbItem = computed(() => (cbSelected.value === 'card' ? null : profitCardDraft.cb.items[cbSelected.value]))
-const cbTitle = computed(() => (cbSelected.value === 'card' ? t('카드 전체', 'Whole Card') : t(CB_ITEM_LABELS[cbSelected.value].ko, CB_ITEM_LABELS[cbSelected.value].en)))
+const cbTitle = computed(() => {
+  if (cbSelected.value === 'card') {
+    const i = profitCardDraft.cb.stickers.findIndex((x) => x.id === cbSticker.value)
+    return i >= 0 ? `${t('카드 전체', 'Whole Card')} · PNG ${i + 1}` : t('카드 전체', 'Whole Card')
+  }
+  return t(CB_ITEM_LABELS[cbSelected.value].ko, CB_ITEM_LABELS[cbSelected.value].en)
+})
+// 편집 대상 드롭다운: 카드 전체 → 올린 PNG들 → 카드의 각 글자/요소 순서
+const cbMenuOpen = ref(false)
+const cbMenuOptions = computed(() => {
+  const list: Array<{ key: string; label: string; active: boolean; indent?: boolean }> = [
+    { key: 'card', label: t('카드 전체', 'Whole Card'), active: cbSelected.value === 'card' && !cbSticker.value }
+  ]
+  profitCardDraft.cb.stickers.forEach((st, i) => {
+    list.push({ key: 'sticker:' + st.id, label: 'PNG ' + (i + 1), active: cbSticker.value === st.id, indent: true })
+  })
+  for (const k of CB_ITEM_KEYS) {
+    list.push({ key: k, label: t(CB_ITEM_LABELS[k].ko, CB_ITEM_LABELS[k].en), active: cbSelected.value === k })
+  }
+  return list
+})
+function cbPickMenu(key: string) {
+  cbMenuOpen.value = false
+  if (key === 'card') cbSelectCard()
+  else if (key.startsWith('sticker:')) cbOnStickerSelect(key.slice(8))
+  else cbOnSelect(key as CbItemKey)
+}
+function closeCbMenu() {
+  cbMenuOpen.value = false
+}
+onMounted(() => window.addEventListener('click', closeCbMenu))
+onBeforeUnmount(() => window.removeEventListener('click', closeCbMenu))
 const cbKind = computed<'card' | 'close' | 'divider' | 'sideBox' | 'text'>(() => {
   const k = cbSelected.value
   if (k === 'card') return 'card'
