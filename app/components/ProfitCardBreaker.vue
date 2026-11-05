@@ -19,35 +19,51 @@
             <span v-for="h in STICKER_HANDLES" :key="h" class="cbk-h" :class="'cbk-h-' + h" @pointerdown.stop="onStickerDown($event, st, h)" />
           </template>
         </div>
+        <!-- 글자 줄마다 "기본 글자 기준 고정 칸(cbk-fix)"을 두고 실제 글자(cbk-real)는 그 위에 띄워 그린다.
+             그래서 글자를 지우거나 크기/내용을 바꿔도 다른 글자들의 위치는 변하지 않는다. -->
         <div class="cbk-content">
           <div class="cbk-header">
-            <div class="cbk-title" :class="pickClass()" :style="itemStyle('title', { outline: outlineFor('title'), outlineOffset: '3px' })" @click.stop="pick('title')" @dblclick.stop="startEdit('title')">
+            <div class="cbk-fix">
+              <div class="cbk-title cbk-ghost" aria-hidden="true">ktxexchange</div>
+            <div class="cbk-title cbk-real" :class="pickClass()" :style="itemStyle('title', { outline: outlineFor('title'), outlineOffset: '3px' })" @click.stop="pick('title')" @dblclick.stop="startEdit('title')">
               <input v-if="editing === 'title'" :ref="setEditRef" v-model="editValue" class="cbk-edit" :size="editSize" @click.stop @dblclick.stop @keydown.enter.prevent="commitEdit" @keydown.esc.prevent="cancelEdit" @blur="commitEdit" />
               <template v-else>{{ cb.texts.title }}</template>
             </div>
+            </div>
           </div>
           <div class="cbk-values">
-            <div class="cbk-pct" :style="{ color: accent }">
+            <div class="cbk-fix">
+              <div class="cbk-pct cbk-ghost" aria-hidden="true"><span>0.00</span><span>%</span></div>
+            <div class="cbk-pct cbk-real" :style="{ color: accent }">
               <span :class="pickClass()" :style="itemStyle('percent', { outline: outlineFor('percent'), outlineOffset: '3px' })" @click.stop="pick('percent')">{{ percentText }}</span>
               <span :class="pickClass()" :style="itemStyle('percentSign', { outline: outlineFor('percentSign'), outlineOffset: '3px' })" @click.stop="pick('percentSign')" @dblclick.stop="startEdit('percentSign')">
                 <input v-if="editing === 'percentSign'" :ref="setEditRef" v-model="editValue" class="cbk-edit" :size="editSize" @click.stop @dblclick.stop @keydown.enter.prevent="commitEdit" @keydown.esc.prevent="cancelEdit" @blur="commitEdit" />
                 <template v-else>{{ cb.texts.sign }}</template>
               </span>
             </div>
-            <div class="cbk-amt" :class="pickClass()" :style="itemStyle('profit', { outline: outlineFor('profit'), outlineOffset: '3px' })" @click.stop="pick('profit')" @dblclick.stop="startEdit('profit')">
+            </div>
+            <div class="cbk-fix">
+              <div class="cbk-amt cbk-ghost" aria-hidden="true">0 원</div>
+            <div class="cbk-amt cbk-real" :class="pickClass()" :style="itemStyle('profit', { outline: outlineFor('profit'), outlineOffset: '3px' })" @click.stop="pick('profit')" @dblclick.stop="startEdit('profit')">
               <template v-if="editing === 'profit'">{{ wonNumberText }} <input :ref="setEditRef" v-model="editValue" class="cbk-edit" :size="editSize" @click.stop @dblclick.stop @keydown.enter.prevent="commitEdit" @keydown.esc.prevent="cancelEdit" @blur="commitEdit" /></template>
               <template v-else>{{ wonLine }}</template>
+            </div>
             </div>
           </div>
           <div class="cbk-divider" :class="pickClass()" :style="dividerStyle" @click.stop="pick('divider')" />
           <div class="cbk-sep" />
           <div class="cbk-grid">
             <div class="cbk-item">
-              <label class="cbk-label" :class="pickClass()" :style="itemStyle('lblCoin', { outline: outlineFor('lblCoin'), outlineOffset: '2px' })" @click.stop="pick('lblCoin')" @dblclick.stop="startEdit('lblCoin')">
+              <div class="cbk-fix">
+                <div class="cbk-label cbk-ghost" aria-hidden="true">코인</div>
+              <label class="cbk-label cbk-real" :class="pickClass()" :style="itemStyle('lblCoin', { outline: outlineFor('lblCoin'), outlineOffset: '2px' })" @click.stop="pick('lblCoin')" @dblclick.stop="startEdit('lblCoin')">
                 <input v-if="editing === 'lblCoin'" :ref="setEditRef" v-model="editValue" class="cbk-edit" :size="editSize" @click.stop @dblclick.stop @keydown.enter.prevent="commitEdit" @keydown.esc.prevent="cancelEdit" @blur="commitEdit" />
                 <template v-else>{{ cb.texts.coin }}</template>
               </label>
-              <div class="cbk-valwrap">
+              </div>
+              <div class="cbk-fix">
+                <div class="cbk-valwrap cbk-ghost" aria-hidden="true"><span>BTCUSDT</span><span class="cbk-side" style="font-size: 19px"><span class="cbk-side-text">롱</span></span></div>
+              <div class="cbk-valwrap cbk-real">
                 <span :class="pickClass()" :style="itemStyle('symbol', { outline: outlineFor('symbol'), outlineOffset: '2px' })" @click.stop="pick('symbol')">{{ symbol }}</span>
                 <span class="cbk-side" :class="[side === 'short' ? 'cbk-short' : 'cbk-long', pickClass()]" :style="itemStyle('side', { color: it('side').color || (side === 'short' ? '#EF4444' : '#22C55E'), opacity: undefined })" @click.stop="pick('side')" @dblclick.stop="startEdit('side')">
                   <span class="cbk-side-box" :class="pickClass()" :style="sideBoxStyle" @click.stop="pick('sideBox')" />
@@ -57,36 +73,55 @@
                   </span>
                 </span>
               </div>
+              </div>
             </div>
             <div class="cbk-item">
-              <label class="cbk-label" :class="pickClass()" :style="itemStyle('lblLev', { outline: outlineFor('lblLev'), outlineOffset: '2px' })" @click.stop="pick('lblLev')" @dblclick.stop="startEdit('lblLev')">
+              <div class="cbk-fix">
+                <div class="cbk-label cbk-ghost" aria-hidden="true">코인</div>
+              <label class="cbk-label cbk-real" :class="pickClass()" :style="itemStyle('lblLev', { outline: outlineFor('lblLev'), outlineOffset: '2px' })" @click.stop="pick('lblLev')" @dblclick.stop="startEdit('lblLev')">
                 <input v-if="editing === 'lblLev'" :ref="setEditRef" v-model="editValue" class="cbk-edit" :size="editSize" @click.stop @dblclick.stop @keydown.enter.prevent="commitEdit" @keydown.esc.prevent="cancelEdit" @blur="commitEdit" />
                 <template v-else>{{ cb.texts.lev }}</template>
               </label>
-              <span class="cbk-val" :class="pickClass()" :style="itemStyle('lev', { outline: outlineFor('lev'), outlineOffset: '2px' })" @click.stop="pick('lev')" @dblclick.stop="startEdit('lev')">
+              </div>
+              <div class="cbk-fix">
+                <div class="cbk-val cbk-ghost" aria-hidden="true">0</div>
+              <span class="cbk-val cbk-real" :class="pickClass()" :style="itemStyle('lev', { outline: outlineFor('lev'), outlineOffset: '2px' })" @click.stop="pick('lev')" @dblclick.stop="startEdit('lev')">
                 <template v-if="editing === 'lev'"><input :ref="setEditRef" v-model="editValue" class="cbk-edit" :size="editSize" @click.stop @dblclick.stop @keydown.enter.prevent="commitEdit" @keydown.esc.prevent="cancelEdit" @blur="commitEdit" /> x{{ levNumber }}</template>
                 <template v-else>{{ levLine }}</template>
               </span>
+              </div>
             </div>
             <div class="cbk-item">
-              <label class="cbk-label" :class="pickClass()" :style="itemStyle('lblEntry', { outline: outlineFor('lblEntry'), outlineOffset: '2px' })" @click.stop="pick('lblEntry')" @dblclick.stop="startEdit('lblEntry')">
+              <div class="cbk-fix">
+                <div class="cbk-label cbk-ghost" aria-hidden="true">코인</div>
+              <label class="cbk-label cbk-real" :class="pickClass()" :style="itemStyle('lblEntry', { outline: outlineFor('lblEntry'), outlineOffset: '2px' })" @click.stop="pick('lblEntry')" @dblclick.stop="startEdit('lblEntry')">
                 <input v-if="editing === 'lblEntry'" :ref="setEditRef" v-model="editValue" class="cbk-edit" :size="editSize" @click.stop @dblclick.stop @keydown.enter.prevent="commitEdit" @keydown.esc.prevent="cancelEdit" @blur="commitEdit" />
                 <template v-else>{{ cb.texts.entry }}</template>
               </label>
-              <span class="cbk-val" :class="pickClass()" :style="itemStyle('entry', { outline: outlineFor('entry'), outlineOffset: '2px' })" @click.stop="pick('entry')" @dblclick.stop="startEdit('entry')">
+              </div>
+              <div class="cbk-fix">
+                <div class="cbk-val cbk-ghost" aria-hidden="true">0</div>
+              <span class="cbk-val cbk-real" :class="pickClass()" :style="itemStyle('entry', { outline: outlineFor('entry'), outlineOffset: '2px' })" @click.stop="pick('entry')" @dblclick.stop="startEdit('entry')">
                 <template v-if="editing === 'entry'">{{ entryText }} <input :ref="setEditRef" v-model="editValue" class="cbk-edit" :size="editSize" @click.stop @dblclick.stop @keydown.enter.prevent="commitEdit" @keydown.esc.prevent="cancelEdit" @blur="commitEdit" /></template>
                 <template v-else>{{ entryLine }}</template>
               </span>
+              </div>
             </div>
             <div class="cbk-item">
-              <label class="cbk-label" :class="pickClass()" :style="itemStyle('lblExit', { outline: outlineFor('lblExit'), outlineOffset: '2px' })" @click.stop="pick('lblExit')" @dblclick.stop="startEdit('lblExit')">
+              <div class="cbk-fix">
+                <div class="cbk-label cbk-ghost" aria-hidden="true">코인</div>
+              <label class="cbk-label cbk-real" :class="pickClass()" :style="itemStyle('lblExit', { outline: outlineFor('lblExit'), outlineOffset: '2px' })" @click.stop="pick('lblExit')" @dblclick.stop="startEdit('lblExit')">
                 <input v-if="editing === 'lblExit'" :ref="setEditRef" v-model="editValue" class="cbk-edit" :size="editSize" @click.stop @dblclick.stop @keydown.enter.prevent="commitEdit" @keydown.esc.prevent="cancelEdit" @blur="commitEdit" />
                 <template v-else>{{ cb.texts.exit }}</template>
               </label>
-              <span class="cbk-val" :class="pickClass()" :style="itemStyle('exit', { outline: outlineFor('exit'), outlineOffset: '2px' })" @click.stop="pick('exit')" @dblclick.stop="startEdit('exit')">
+              </div>
+              <div class="cbk-fix">
+                <div class="cbk-val cbk-ghost" aria-hidden="true">0</div>
+              <span class="cbk-val cbk-real" :class="pickClass()" :style="itemStyle('exit', { outline: outlineFor('exit'), outlineOffset: '2px' })" @click.stop="pick('exit')" @dblclick.stop="startEdit('exit')">
                 <template v-if="editing === 'exit'">{{ exitText }} <input :ref="setEditRef" v-model="editValue" class="cbk-edit" :size="editSize" @click.stop @dblclick.stop @keydown.enter.prevent="commitEdit" @keydown.esc.prevent="cancelEdit" @blur="commitEdit" /></template>
                 <template v-else>{{ exitLine }}</template>
               </span>
+              </div>
             </div>
           </div>
         </div>
@@ -509,6 +544,21 @@ function onCloseClick() {
 }
 .cbk-close:hover {
   opacity: 1;
+}
+/* 글자 줄 고정: 칸 크기는 보이지 않는 기본 글자(ghost)가 정하고, 실제 글자는 칸 왼쪽 위에 겹쳐 그린다 */
+.cbk-fix {
+  position: relative;
+}
+.cbk-ghost {
+  visibility: hidden;
+  pointer-events: none !important;
+}
+.cbk-real {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: max-content;
+  white-space: nowrap;
 }
 .cbk-content .cbk-pick,
 .cbk-content .cbk-edit {
