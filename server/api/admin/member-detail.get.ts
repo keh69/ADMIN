@@ -24,7 +24,7 @@ export default defineEventHandler(async (event) => {
     const supa = getSupabaseAdminClient()
     const { data: u, error: e1 } = await supa
       .from('bitduck_users')
-      .select('id, username, name, birth_date, bank_name, bank_account, account_holder, referral_code, role, created_at')
+      .select('id, username, name, birth_date, bank_name, bank_account, account_holder, referral_code, role, created_at, login_locked_at')
       .eq('username', username)
       .maybeSingle()
     if (e1) throw e1
@@ -53,6 +53,7 @@ export default defineEventHandler(async (event) => {
       referralCode: String(u.referral_code || ''),
       role: String(u.role || 'user'),
       createdAt: String(u.created_at || ''),
+      loginLocked: Boolean((u as any).login_locked_at),
       balanceUsdt: Number(balRow?.usdt ?? 0),
       positions: (positions || []).map((p: any) => ({
         id: Number(p.id),

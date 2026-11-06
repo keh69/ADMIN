@@ -1652,7 +1652,7 @@ async function resetUserPassword(userId: number) {
   msg.value = null
   try {
     await $fetch('/api/admin/users/reset-password', { method: 'POST', body: { userId } })
-    msg.value = t('비밀번호가 아이디와 동일하게 초기화되었습니다.', 'Password reset to match username.')
+    msg.value = t('비밀번호가 아이디와 동일하게 초기화되었습니다. (접속제한도 해제됨)', 'Password reset to match username. (Login lock cleared)')
   } catch (e: any) {
     error.value = e?.data?.statusMessage || t('초기화 실패', 'Reset failed')
   } finally {

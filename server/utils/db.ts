@@ -309,6 +309,8 @@ export function getDb() {
   if (!userCols.includes('terms_agreed_at')) db.exec(`ALTER TABLE users ADD COLUMN terms_agreed_at TEXT NULL`)
   if (!userCols.includes('password_reset_required')) db.exec(`ALTER TABLE users ADD COLUMN password_reset_required INTEGER NOT NULL DEFAULT 0`)
   if (!userCols.includes('password_reset_notice_dismissed_at')) db.exec(`ALTER TABLE users ADD COLUMN password_reset_notice_dismissed_at TEXT NULL`)
+  if (!userCols.includes('login_fail_count')) db.exec(`ALTER TABLE users ADD COLUMN login_fail_count INTEGER NOT NULL DEFAULT 0`)
+  if (!userCols.includes('login_locked_at')) db.exec(`ALTER TABLE users ADD COLUMN login_locked_at TEXT NULL`)
   if (!userCols.includes('updated_at')) db.exec(`ALTER TABLE users ADD COLUMN updated_at TEXT NOT NULL DEFAULT ''`)
 
   // 과거 UI에서 이름칸에 아이디를 보여주던 데이터는 빈값으로 정리

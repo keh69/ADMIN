@@ -128,6 +128,9 @@ export async function approvePasswordReset(requestId: number, adminUser: Session
         password_hash: newHash,
         password_reset_required: true,
         password_reset_notice_dismissed_at: null,
+        // 비밀번호 초기화 = 5회 오류 접속제한 해제
+        login_fail_count: 0,
+        login_locked_at: null,
         updated_at: approvedAt
       })
       .eq('id', Number(req.user_id))
@@ -145,7 +148,7 @@ export async function approvePasswordReset(requestId: number, adminUser: Session
         read_at: null
       }
     ])
-    return { ok: true }
+    return { ok: true, userId: Number(req.user_id), username: String(req.username_snapshot || '') }
   }
 
   const db = getDb()
@@ -154,7 +157,7 @@ export async function approvePasswordReset(requestId: number, adminUser: Session
   if (String(req.status) !== 'pending') throw createError({ statusCode: 409, statusMessage: '이미 처리된 요청입니다.' })
 
   const newHash = hashPassword('1234')
-  db.prepare(`UPDATE users SET password_hash = ?, password_reset_required = 1, password_reset_notice_dismissed_at = NULL, updated_at = ? WHERE id = ?`).run(newHash, approvedAt, Number(req.user_id))
+  db.prepare(`UPDATE users SET password_hash = ?, password_reset_required = 1, password_reset_notice_dismissed_at = NULL, login_fail_count = 0, login_locked_at = NULL, updated_at = ? WHERE id = ?`).run(newHash, approvedAt, Number(req.user_id))
   db.prepare(`UPDATE password_reset_requests SET status = 'approved', approved_by = ?, approved_at = ? WHERE id = ?`).run(Number(adminUser.id), approvedAt, Number(requestId))
   await insertMessages([
     {
@@ -166,5 +169,5 @@ export async function approvePasswordReset(requestId: number, adminUser: Session
       read_at: null
     }
   ])
-  return { ok: true }
+  return { ok: true, userId: Number(req.user_id), username: String(req.username_snapshot || '') }
 }

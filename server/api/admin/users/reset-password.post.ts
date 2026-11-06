@@ -4,6 +4,7 @@ import { getDb } from '../../../utils/db'
 import { supabaseAppDbEnabled, syncUserToSupabase } from '../../../utils/supa-appdb'
 import { getSupabaseAdminClient } from '../../../utils/supabase'
 import { logAdminAction } from '../../../utils/supa-log'
+import { recordProfileHistory } from '../../../utils/account-security'
 
 const BodySchema = z.object({
   userId: z.number().int().positive()
@@ -16,7 +17,7 @@ export default defineEventHandler(async (event) => {
 
   if (supabaseAppDbEnabled()) {
     const supa = getSupabaseAdminClient()
-    const { data: row, error: e1 } = await supa.from('bitduck_users').select('username').eq('id', body.userId).single()
+    const { data: row, error: e1 } = await supa.from('bitduck_users').select('username, login_locked_at').eq('id', body.userId).single()
     if (e1) throw e1
     if (!row?.username) throw createError({ statusCode: 404, statusMessage: '유저를 찾을 수 없습니다.' })
 
@@ -27,11 +28,28 @@ export default defineEventHandler(async (event) => {
         password_hash: passwordHash,
         password_reset_required: true,
         password_reset_notice_dismissed_at: null,
+        // 비밀번호 초기화 = 5회 오류 접속제한 해제
+        login_fail_count: 0,
+        login_locked_at: null,
         updated_at: now
       })
       .eq('id', body.userId)
     if (error) throw error
     await logAdminAction(event, { adminUserId: admin.id, action: 'password_reset_force', targetType: 'user', targetId: body.userId })
+    await recordProfileHistory(event, {
+      userId: body.userId,
+      username: String(row.username),
+      actor: { id: Number(admin.id), username: String(admin.username), role: String(admin.role) },
+      source: 'admin',
+      changes: [
+        {
+          field: 'password',
+          label: '비밀번호',
+          before: '',
+          after: row.login_locked_at ? '초기화(아이디와 동일) · 접속제한 해제' : '초기화(아이디와 동일)'
+        }
+      ]
+    })
     return { ok: true }
   }
 
@@ -41,7 +59,7 @@ export default defineEventHandler(async (event) => {
 
   const passwordHash = hashPassword(row.username)
   db.prepare(
-    'UPDATE users SET password_hash = ?, password_reset_required = 1, password_reset_notice_dismissed_at = NULL, updated_at = ? WHERE id = ?'
+    'UPDATE users SET password_hash = ?, password_reset_required = 1, password_reset_notice_dismissed_at = NULL, login_fail_count = 0, login_locked_at = NULL, updated_at = ? WHERE id = ?'
   ).run(passwordHash, now, body.userId)
 
   const userRow = db.prepare('SELECT * FROM users WHERE id = ?').get(body.userId) as any

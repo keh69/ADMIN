@@ -7,6 +7,7 @@ import { canEditMenu, canEditMemberRole } from '../../../utils/menu-permissions'
 import { getRoleDefinition, canGrantRole } from '../../../utils/roles'
 import { logAdminAction } from '../../../utils/supa-log'
 import { assertUserInScope } from '../../../utils/referral'
+import { diffProfile, loadProfileRow, recordProfileHistory, usernameTaken } from '../../../utils/account-security'
 
 const BodySchema = z.object({
   userId: z.number().int().positive(),
@@ -81,19 +82,15 @@ async function handleUpdate(event: any) {
 
   if (useSupa) {
     const supa = getSupabaseAdminClient()
+    // 수정 기록용: 바꾸기 전 회원정보
+    const beforeRow = await loadProfileRow(body.userId)
 
     if (typeof body.username === 'string') {
       assertNotLockedSuperAdmin()
       // 아이디(로그인 계정명) 변경은 총관리자만, 중복 확인 필요
       await requireSuperAdmin(event)
-      const { data: existing, error: eCheck } = await supa
-        .from('bitduck_users')
-        .select('id')
-        .eq('username', body.username)
-        .neq('id', body.userId)
-        .limit(1)
-      if (eCheck) throw eCheck
-      if (existing && existing.length) {
+      // 아이디는 대소문자 구분 없이 하나만(ABC가 있으면 abc로 바꿀 수 없음)
+      if (await usernameTaken(body.username, body.userId)) {
         throw createError({ statusCode: 409, statusMessage: '이미 사용 중인 아이디입니다.' })
       }
       const { error } = await supa
@@ -198,6 +195,17 @@ async function handleUpdate(event: any) {
     }
 
     await logAdminAction(event, { adminUserId: admin.id, action: 'user_update', targetType: 'user', targetId: body.userId, detail: { fields: Object.keys(body).filter((k) => k !== 'userId') } })
+    // 회원정보 수정 기록(총관리자만 회원정보 > 기록에서 봄)
+    const afterRow = await loadProfileRow(body.userId)
+    if (beforeRow && afterRow) {
+      await recordProfileHistory(event, {
+        userId: body.userId,
+        username: String(afterRow.username || ''),
+        actor: { id: Number(admin.id), username: String(admin.username), role: String(admin.role) },
+        source: 'admin',
+        changes: diffProfile(beforeRow, afterRow)
+      })
+    }
     return { ok: true }
   }
 

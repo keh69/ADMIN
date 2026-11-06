@@ -5,6 +5,7 @@ import { supabaseAppDbEnabled } from '../../../utils/supa-appdb'
 import { supaSelectOne, supaUpsertStrict, supaUpsertUserSettings } from '../../../utils/supabase'
 import { getRoleDefinition, listRoles } from '../../../utils/roles'
 import { logAdminAction } from '../../../utils/supa-log'
+import { usernameTaken } from '../../../utils/account-security'
 
 const BodySchema = z.object({
   username: z.string().min(3).max(20),
@@ -35,8 +36,8 @@ export default defineEventHandler(async (event) => {
   }
 
   if (useSupa) {
-    const exists = await supaSelectOne<any>('bitduck_users', { username: body.username })
-    if (exists?.id) {
+    // 아이디는 대소문자 구분 없이 하나만
+    if (await usernameTaken(body.username)) {
       throw createError({ statusCode: 409, statusMessage: '이미 사용 중인 아이디입니다.' })
     }
 
