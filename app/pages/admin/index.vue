@@ -74,10 +74,10 @@
               <template v-if="userDraft[u.id]">
                 <td class="border border-white/10 px-2 py-1 text-center font-mono text-slate-500">{{ (page - 1) * pageSize + ui + 1 }}</td>
                 <td class="border border-white/10 p-0">
-                  <input v-model.trim="userDraft[u.id].username" :disabled="isLockedUser(u)" class="w-[calc(20ch+1rem)] bg-transparent px-2 py-1 text-slate-100 outline-none focus:bg-black/40 disabled:cursor-not-allowed disabled:opacity-50 [&>option]:bg-[#0b1726]" @blur="saveUserRow(u.id)" @keyup.enter="saveUserRow(u.id)" />
+                  <input v-model.trim="userDraft[u.id].username" :disabled="isLockedUser(u)" class="w-[calc(20ch+1rem)] bg-transparent px-2 py-1 text-slate-100 outline-none read-only:cursor-default [&:not(:read-only)]:bg-black/50 [&:not(:read-only)]:ring-1 [&:not(:read-only)]:ring-cyan-400 disabled:cursor-not-allowed disabled:opacity-50 [&>option]:bg-[#0b1726]" :readonly="!isUserEditing(u.id, 'username')" @dblclick="startUserEdit(u, 'username', $event)" @keydown.esc.prevent="cancelUserEdit(u, $event)" @blur="endUserEdit(u.id, 'username')" @keyup.enter="endUserEdit(u.id, 'username')" />
                 </td>
                 <td class="border border-white/10 p-0">
-                  <input v-model.trim="userDraft[u.id].name" :disabled="isLockedUser(u)" class="w-[calc(10em+1rem)] bg-transparent px-2 py-1 text-slate-100 outline-none focus:bg-black/40 disabled:cursor-not-allowed disabled:opacity-50 [&>option]:bg-[#0b1726]" @blur="saveUserRow(u.id)" @keyup.enter="saveUserRow(u.id)" />
+                  <input v-model.trim="userDraft[u.id].name" :disabled="isLockedUser(u)" class="w-[calc(10em+1rem)] bg-transparent px-2 py-1 text-slate-100 outline-none read-only:cursor-default [&:not(:read-only)]:bg-black/50 [&:not(:read-only)]:ring-1 [&:not(:read-only)]:ring-cyan-400 disabled:cursor-not-allowed disabled:opacity-50 [&>option]:bg-[#0b1726]" :readonly="!isUserEditing(u.id, 'name')" @dblclick="startUserEdit(u, 'name', $event)" @keydown.esc.prevent="cancelUserEdit(u, $event)" @blur="endUserEdit(u.id, 'name')" @keyup.enter="endUserEdit(u.id, 'name')" />
                 </td>
                 <td class="border border-white/10 px-2 py-1">
                   <button type="button" class="border border-white/20 bg-white/[0.06] px-2 py-0.5 text-[12px] hover:bg-white/10 disabled:opacity-40" :disabled="isLockedUser(u)" @click="openAccountModal(u)">{{ t('계좌정보', 'Bank') }}</button>
@@ -89,15 +89,14 @@
                     type="text"
                     inputmode="numeric"
                     :title="`≈ ${(Number(userDraft[u.id].usdt) || 0).toFixed(2)} USDT`"
-                    class="w-[calc(12ch+1rem)] text-right font-mono bg-transparent px-2 py-1 text-slate-100 outline-none focus:bg-black/40 disabled:cursor-not-allowed disabled:opacity-50 [&>option]:bg-[#0b1726]"
+                    class="w-[calc(12ch+1rem)] text-right font-mono bg-transparent px-2 py-1 text-slate-100 outline-none read-only:cursor-default [&:not(:read-only)]:bg-black/50 [&:not(:read-only)]:ring-1 [&:not(:read-only)]:ring-cyan-400 disabled:cursor-not-allowed disabled:opacity-50 [&>option]:bg-[#0b1726]"
                     @input="onUserKrwInput(u.id, $event)"
-                    @blur="saveUserRow(u.id)"
-                    @keyup.enter="saveUserRow(u.id)"
+                    :readonly="!isUserEditing(u.id, 'balance')" @dblclick="startUserEdit(u, 'balance', $event)" @keydown.esc.prevent="cancelUserEdit(u, $event)" @blur="endUserEdit(u.id, 'balance')" @keyup.enter="endUserEdit(u.id, 'balance')"
                   />
-                  <input v-else v-model.number="userDraft[u.id].usdt" type="number" min="0" step="0.01" class="w-28 text-right font-mono bg-transparent px-2 py-1 text-slate-100 outline-none focus:bg-black/40 disabled:cursor-not-allowed disabled:opacity-50 [&>option]:bg-[#0b1726]" @blur="saveUserRow(u.id)" @keyup.enter="saveUserRow(u.id)" />
+                  <input v-else v-model.number="userDraft[u.id].usdt" type="number" min="0" step="0.01" class="w-28 text-right font-mono bg-transparent px-2 py-1 text-slate-100 outline-none read-only:cursor-default [&:not(:read-only)]:bg-black/50 [&:not(:read-only)]:ring-1 [&:not(:read-only)]:ring-cyan-400 disabled:cursor-not-allowed disabled:opacity-50 [&>option]:bg-[#0b1726]" :readonly="!isUserEditing(u.id, 'balance')" @dblclick="startUserEdit(u, 'balance', $event)" @keydown.esc.prevent="cancelUserEdit(u, $event)" @blur="endUserEdit(u.id, 'balance')" @keyup.enter="endUserEdit(u.id, 'balance')" />
                 </td>
                 <td class="border border-white/10 p-0">
-                  <input v-model.trim="userDraft[u.id].referralCode" :disabled="isLockedUser(u)" class="w-24 bg-transparent px-2 py-1 text-slate-100 outline-none focus:bg-black/40 disabled:cursor-not-allowed disabled:opacity-50 [&>option]:bg-[#0b1726]" @blur="saveUserRow(u.id)" @keyup.enter="saveUserRow(u.id)" />
+                  <input v-model.trim="userDraft[u.id].referralCode" :disabled="isLockedUser(u)" class="w-24 bg-transparent px-2 py-1 text-slate-100 outline-none read-only:cursor-default [&:not(:read-only)]:bg-black/50 [&:not(:read-only)]:ring-1 [&:not(:read-only)]:ring-cyan-400 disabled:cursor-not-allowed disabled:opacity-50 [&>option]:bg-[#0b1726]" :readonly="!isUserEditing(u.id, 'referralCode')" @dblclick="startUserEdit(u, 'referralCode', $event)" @keydown.esc.prevent="cancelUserEdit(u, $event)" @blur="endUserEdit(u.id, 'referralCode')" @keyup.enter="endUserEdit(u.id, 'referralCode')" />
                 </td>
                 <td class="border border-white/10 px-2 py-1 whitespace-nowrap text-slate-500">{{ u.topCode || '—' }}</td>
                 <td class="border border-white/10 p-0">
@@ -1469,6 +1468,42 @@ const sortedUsers = computed(() => {
     return String(av ?? '').localeCompare(String(bv ?? '')) * dir
   })
 })
+
+// ── 유저관리 표: 아이디/이름/잔액/추천코드는 더블클릭해야 고칠 수 있다(평소엔 읽기 전용 글자) ──
+// 더블클릭 → 입력 커서가 깜박이고, Enter 또는 다른 곳 클릭 = 저장, Esc = 원래 값으로 되돌림
+const userEditCell = ref<{ id: number; field: string } | null>(null)
+function isUserEditing(id: number, field: string) {
+  return userEditCell.value?.id === id && userEditCell.value?.field === field
+}
+function startUserEdit(u: AdminUserRow, field: string, e: Event) {
+  if (field !== 'balance' && isLockedUser(u)) return
+  userEditCell.value = { id: u.id, field }
+  const el = e.target as HTMLInputElement
+  nextTick(() => {
+    el.focus()
+    try {
+      const n = el.value.length
+      el.setSelectionRange(n, n)
+    } catch {}
+  })
+}
+function endUserEdit(id: number, field: string) {
+  if (!isUserEditing(id, field)) return
+  userEditCell.value = null
+  saveUserRow(id)
+}
+function cancelUserEdit(u: AdminUserRow, e: Event) {
+  const d = userDraft[u.id]
+  if (d) {
+    d.username = u.username
+    d.name = u.name || ''
+    d.referralCode = u.referralCode || ''
+    d.usdt = Number(u.usdt ?? 0)
+    d.krw = d.krwInitial
+  }
+  userEditCell.value = null
+  ;(e.target as HTMLInputElement).blur()
+}
 
 // 유저관리 상단: 지금 목록의 잔액 합계(USDT)와 일반 회원만의 합계
 const usersBalanceTotal = computed(() => {
