@@ -368,6 +368,51 @@
       <p v-if="liquidationSettingMsg" class="mt-3 text-sm text-emerald-300">{{ liquidationSettingMsg }}</p>
     </div>
 
+    <!-- 차트 갱신주기: 거래소 차트 화면의 그리기/조회 주기(초). 저장하면 테스트·거래소 차트 화면에 30초 안에 적용된다. -->
+    <div v-show="activeTab === 'chartTiming'" class="rounded-2xl border border-white/10 bg-white/5 p-6">
+      <h2 class="text-lg font-semibold">{{ t('차트 갱신주기', 'Chart Refresh Intervals') }}</h2>
+      <p class="mt-1 text-sm text-slate-400">
+        {{ t('거래소 차트 화면이 몇 초마다 다시 그리고/조회할지 정합니다. 저장하면 테스트와 거래소 차트 화면에 30초 안에 적용됩니다. 숫자가 작을수록 빠르지만 서버 호출(데이터 사용량)이 늘어나는 항목도 있습니다.', 'How often the exchange chart screen redraws / fetches. Saved values apply to the test and exchange chart screens within 30 seconds. Smaller is faster but some items increase server calls.') }}
+      </p>
+      <div class="mt-4 space-y-3">
+        <div v-for="row in chartTimingRows" :key="row.key" class="flex flex-wrap items-center gap-4 rounded-xl border border-white/10 bg-white/5 p-4">
+          <div class="w-64">
+            <div class="text-sm font-semibold text-slate-200">{{ row.label }}</div>
+            <div class="mt-0.5 text-xs text-slate-500">{{ row.desc }}</div>
+          </div>
+          <div class="flex items-center gap-2 text-sm text-slate-300">
+            <input
+              v-model.number="chartTimingDraft[row.key]"
+              type="number"
+              :min="chartTimingLimits[row.key][0] / 1000"
+              :max="chartTimingLimits[row.key][1] / 1000"
+              step="0.1"
+              class="w-24 rounded-md bg-white/5 px-3 py-2 text-right text-sm outline-none ring-1 ring-white/10 focus:ring-indigo-500"
+            />
+            <span>{{ t('초', 'sec') }}</span>
+          </div>
+          <span class="text-xs text-slate-500">
+            {{ t('기본', 'Default') }} {{ chartTimingDefaults[row.key] / 1000 }}{{ t('초', 's') }} · {{ t('범위', 'Range') }} {{ chartTimingLimits[row.key][0] / 1000 }}~{{ chartTimingLimits[row.key][1] / 1000 }}{{ t('초', 's') }}
+          </span>
+        </div>
+      </div>
+      <div class="mt-4 flex items-center gap-3">
+        <button
+          type="button"
+          class="rounded-md bg-indigo-500 px-4 py-2 text-sm font-semibold hover:bg-indigo-400 disabled:opacity-50"
+          :disabled="chartTimingSaving"
+          @click="saveChartTiming"
+        >
+          {{ chartTimingSaving ? t('저장 중…', 'Saving…') : t('저장', 'Save') }}
+        </button>
+        <button type="button" class="rounded-md bg-white/10 px-4 py-2 text-sm text-slate-200 hover:bg-white/15" @click="resetChartTimingDraft">
+          {{ t('기본값으로', 'Reset to defaults') }}
+        </button>
+        <span v-if="chartTimingMsg" class="text-sm text-emerald-300">{{ chartTimingMsg }}</span>
+        <span v-if="chartTimingError" class="text-sm text-red-300">{{ chartTimingError }}</span>
+      </div>
+    </div>
+
     <!-- 덤프오류 (임시 · 보여주기용): 거래소 차트 화면에 회원에게 덤프 에러로그를 띄울지와 생성시간 -->
     <div v-show="activeTab === 'dumpError'" class="rounded-2xl border border-white/10 bg-white/5 p-6">
       <h2 class="text-lg font-semibold">{{ t('덤프오류', 'Dump Error') }}</h2>
@@ -1543,7 +1588,7 @@ const { t, locale } = useLocale()
 const { me, refresh } = useMe()
 await refresh()
 
-type TabKey = 'users' | 'liquidation' | 'misc' | 'nav' | 'profitCard' | 'roles' | 'profitEvents' | 'dbHealth' | 'dumpError'
+type TabKey = 'users' | 'liquidation' | 'misc' | 'nav' | 'profitCard' | 'roles' | 'profitEvents' | 'dbHealth' | 'dumpError' | 'chartTiming'
 const tabs = computed<Array<{ key: TabKey; label: string }>>(() => [
   { key: 'users', label: t('유저 관리', 'User Management') },
   { key: 'liquidation', label: t('강제청산 기준 설정', 'Liquidation Threshold') },
@@ -1553,7 +1598,8 @@ const tabs = computed<Array<{ key: TabKey; label: string }>>(() => [
   { key: 'roles', label: t('역할 관리', 'Role Management') },
   { key: 'profitEvents', label: t('리모콘', 'Remote') },
   { key: 'dbHealth', label: t('DB 연결 상태', 'DB Connection Status') },
-  { key: 'dumpError', label: t('덤프오류', 'Dump Error') }
+  { key: 'dumpError', label: t('덤프오류', 'Dump Error') },
+  { key: 'chartTiming', label: t('차트 갱신주기', 'Chart Refresh') }
 ])
 const activeTab = ref<TabKey>('users')
 
@@ -3122,6 +3168,65 @@ const dumpDraft = reactive<Record<DumpSite, DumpCfg>>({
 const dumpSaving = reactive<Record<DumpSite, boolean>>({ ktx: false, test: false })
 const dumpError = reactive<Record<DumpSite, string | null>>({ ktx: null, test: null })
 const dumpMsg = reactive<Record<DumpSite, string | null>>({ ktx: null, test: null })
+// 차트 갱신주기(테스트/거래소 공통): 서버에는 밀리초로 저장하고 화면에서는 초로 입력한다.
+type ChartTimingKey = 'chartMs' | 'orderbookMs' | 'tradesMs' | 'markPosMs' | 'markIdleMs'
+const chartTimingRows = computed<Array<{ key: ChartTimingKey; label: string; desc: string }>>(() => [
+  { key: 'chartMs', label: t('차트 그리기', 'Chart redraw'), desc: t('봉·현재가·범례를 다시 그리는 주기(서버 호출 없음)', 'Candle/price/legend redraw (no server call)') },
+  { key: 'orderbookMs', label: t('호가표 그리기', 'Order book redraw'), desc: t('받아 둔 호가로 호가표를 다시 그리는 주기(서버 호출 없음)', 'Order book table redraw (no server call)') },
+  { key: 'tradesMs', label: t('체결내역 조회', 'Trades fetch'), desc: t('체결 탭을 보고 있을 때 체결내역을 받아오는 주기(서버 호출)', 'Fetch trades while the Trades tab is open (server call)') },
+  { key: 'markPosMs', label: t('시세·포지션 확인 (포지션 있음)', 'Price/position check (with positions)'), desc: t('포지션이 있을 때 시세·청산·지정가를 확인하는 주기(서버 호출)', 'Price/liquidation/limit check with open positions (server call)') },
+  { key: 'markIdleMs', label: t('시세·포지션 확인 (포지션 없음)', 'Price/position check (no positions)'), desc: t('포지션이 없을 때 같은 확인 주기(서버 호출)', 'Same check without positions (server call)') }
+])
+const chartTimingDefaults = reactive<Record<ChartTimingKey, number>>({ chartMs: 200, orderbookMs: 500, tradesMs: 1000, markPosMs: 1000, markIdleMs: 1500 })
+const chartTimingLimits = reactive<Record<ChartTimingKey, [number, number]>>({
+  chartMs: [50, 5000],
+  orderbookMs: [100, 5000],
+  tradesMs: [300, 10000],
+  markPosMs: [300, 10000],
+  markIdleMs: [300, 10000]
+})
+// 입력칸 값(초)
+const chartTimingDraft = reactive<Record<ChartTimingKey, number>>({ chartMs: 0.2, orderbookMs: 0.5, tradesMs: 1, markPosMs: 1, markIdleMs: 1.5 })
+const chartTimingSaving = ref(false)
+const chartTimingMsg = ref<string | null>(null)
+const chartTimingError = ref<string | null>(null)
+function setChartTimingDraft(ms: Partial<Record<ChartTimingKey, number>>) {
+  for (const k of Object.keys(chartTimingDraft) as ChartTimingKey[]) {
+    const v = Number(ms[k])
+    if (Number.isFinite(v) && v > 0) chartTimingDraft[k] = Math.round(v) / 1000
+  }
+}
+function resetChartTimingDraft() {
+  setChartTimingDraft(chartTimingDefaults)
+  chartTimingMsg.value = null
+}
+async function loadChartTiming() {
+  try {
+    const d = await $fetch<{ timing: Record<ChartTimingKey, number>; defaults: Record<ChartTimingKey, number>; limits: Record<ChartTimingKey, [number, number]> }>('/api/admin/settings/chart-timing')
+    if (d?.defaults) Object.assign(chartTimingDefaults, d.defaults)
+    if (d?.limits) Object.assign(chartTimingLimits, d.limits)
+    if (d?.timing) setChartTimingDraft(d.timing)
+  } catch {
+    // 기본값 유지
+  }
+}
+async function saveChartTiming() {
+  chartTimingSaving.value = true
+  chartTimingMsg.value = null
+  chartTimingError.value = null
+  try {
+    const body = {} as Record<ChartTimingKey, number>
+    for (const k of Object.keys(chartTimingDraft) as ChartTimingKey[]) body[k] = Math.round((Number(chartTimingDraft[k]) || 0) * 1000)
+    const d = await $fetch<{ timing: Record<ChartTimingKey, number> }>('/api/admin/settings/chart-timing', { method: 'POST', body })
+    if (d?.timing) setChartTimingDraft(d.timing)
+    chartTimingMsg.value = t('저장되었습니다. 30초 안에 테스트·거래소 차트 화면에 적용됩니다.', 'Saved. Applies to test and exchange chart screens within 30 seconds.')
+  } catch (e: any) {
+    chartTimingError.value = e?.data?.statusMessage || t('저장 실패', 'Save failed')
+  } finally {
+    chartTimingSaving.value = false
+  }
+}
+
 // 롱숏 덤프: 롱/숏 버튼을 누를 때 pct% 확률로 덤프 페이지로 이동(거래소/테스트 따로)
 type DumpLsCfg = { enabled: boolean; pct: number }
 const dumpLsRows = computed<Array<{ site: DumpSite; label: string }>>(() => [
@@ -3191,6 +3296,7 @@ async function saveDumpSettings(site: DumpSite) {
 
 await load()
 await loadDumpSettings()
+await loadChartTiming()
 await loadLiquidationSetting()
 await loadMiscSettings()
 await loadProfitEvents()
