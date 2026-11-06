@@ -56,7 +56,7 @@ export default defineEventHandler(async (event) => {
     const users = await maybeCache('admin:members:users', 4000, async () => {
       const { data, error } = await supa
         .from('bitduck_users')
-        .select('id, username, name, birth_date, bank_name, bank_account, account_holder, referral_code, role, permissions, created_at')
+        .select('id, username, name, birth_date, bank_name, bank_account, account_holder, referral_code, role, permissions, created_at, approval_status')
         .order('id', { ascending: false })
       if (error) throw error
       return data || []
@@ -130,7 +130,9 @@ export default defineEventHandler(async (event) => {
         id,
         role: roleText(role),
         roleId: role,
-        approved: true,
+        approved: String(u.approval_status || 'approved') === 'approved',
+        // 가입 승인상태: approved(승인) / pending(대기) / rejected(거절)
+        approvalStatus: String(u.approval_status || 'approved'),
         username,
         name: String(u.name || ''),
         birthDate: String(u.birth_date || ''),
@@ -189,6 +191,7 @@ export default defineEventHandler(async (event) => {
       role: roleText(role),
       roleId: role,
       approved: true,
+      approvalStatus: 'approved',
       username,
       name: String(u.name || ''),
       birthDate: String(u.birth_date || ''),

@@ -1,80 +1,69 @@
 <template>
-  <div class="space-y-5">
-    <div class="flex flex-wrap items-end justify-between gap-3">
-      <div>
-        <h1 class="text-xl font-semibold">{{ t('회원 목록', 'Members') }}</h1>
-        <p class="mt-1 text-sm text-slate-400">{{ t('회원 목록을 조회합니다.', 'View the member list.') }}</p>
-      </div>
-      <div class="rounded-xl border border-cyan-500/20 bg-cyan-500/10 px-4 py-2 text-sm text-cyan-100">
-        {{ t('총 보유금액', 'Total Balance') }} <span class="font-data text-base font-semibold">{{ fmtBal(totalBalance) }}</span>
-      </div>
-    </div>
-
-    <div class="space-y-4">
-      <div class="grid gap-2 md:grid-cols-[360px_160px_minmax(220px,1fr)_120px_160px]">
-        <div class="flex items-center gap-2 rounded-md border border-[#173753] bg-[#041425] px-3 py-2 text-sm text-slate-200">
-          <AdminDateInput v-model="fromDate" class="w-full" />
-          <span class="text-slate-500">~</span>
-          <AdminDateInput v-model="toDate" class="w-full" />
+  <!-- 회원 목록 — 설정 > 유저관리2(디자인 F · 표 격자형)와 같은 모양: 표 폭에 맞춘 한 덩어리를 화면 가운데에 -->
+  <div class="lg:mx-[calc(24px_-_21.42857%)]">
+    <div class="mx-auto w-fit max-w-full space-y-2">
+      <div class="flex flex-wrap items-baseline justify-between gap-3">
+        <h1 class="text-base font-semibold text-slate-100">{{ t('회원 목록', 'Members') }}</h1>
+        <div class="flex items-center gap-3 text-[13px]">
+          <span class="text-slate-400">{{ t('총 회원수', 'Total') }} <span class="font-mono text-slate-100">{{ filtered.length }}</span>{{ t('명', '') }}</span>
+          <span class="text-slate-400">{{ t('총 보유금액', 'Total Balance') }} <span class="font-mono text-slate-100">{{ fmtBal(totalBalance) }}</span></span>
+          <button type="button" class="border border-white/20 bg-white/[0.06] px-3 py-1 text-slate-100 hover:bg-white/10" @click="load(true)">↻ {{ t('새로고침', 'Refresh') }}</button>
         </div>
-        <select v-model="roleFilter" class="rounded-md border border-[#173753] bg-[#041425] px-3 py-2 text-sm text-slate-200 outline-none">
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2 text-[13px]">
+        <div class="flex items-center gap-2 border border-white/15 px-2 py-1">
+          <AdminDateInput v-model="fromDate" class="w-32" />
+          <span class="text-slate-500">~</span>
+          <AdminDateInput v-model="toDate" class="w-32" />
+        </div>
+        <select v-model="roleFilter" class="border border-white/15 bg-[#06101b] px-2 py-1 outline-none focus:border-cyan-400">
           <option value="">{{ t('유저역할', 'User Role') }}</option>
           <option value="user">{{ t('회원', 'Member') }}</option>
           <option value="admin">{{ t('부관리자', 'Sub Admin') }}</option>
           <option value="super_admin">{{ t('관리자', 'Admin') }}</option>
         </select>
-        <input
-          v-model.trim="keyword"
-          class="rounded-md border border-[#173753] bg-[#041425] px-3 py-2 text-sm text-slate-200 outline-none placeholder:text-slate-500"
-          :placeholder="t('검색어를 입력하세요', 'Enter a search term')"
-          :key="`members-search-${locale}`"
-        />
-        <select v-model="onlineFilter" class="rounded-md border border-[#173753] bg-[#041425] px-3 py-2 text-sm text-slate-200 outline-none">
+        <input v-model.trim="keyword" class="w-56 border border-white/15 bg-transparent px-2 py-1 outline-none placeholder:text-slate-600 focus:border-cyan-400" :placeholder="t('검색어를 입력하세요', 'Enter a search term')" :key="`members-search-${locale}`" />
+        <select v-model="onlineFilter" class="border border-white/15 bg-[#06101b] px-2 py-1 outline-none focus:border-cyan-400">
           <option value="">{{ t('접속여부', 'Status') }}</option>
           <option value="접속">{{ t('접속', 'Online') }}</option>
           <option value="미접속">{{ t('미접속', 'Offline') }}</option>
         </select>
-        <div class="flex items-center gap-2 rounded-md border border-[#173753] bg-[#041425] px-3 py-2 text-sm text-slate-200">
-          <span class="whitespace-nowrap text-slate-400">{{ t('표시수', 'Rows') }}</span>
-          <input
-            v-model.number="pageSizeInput"
-            type="number"
-            min="1"
-            max="500"
-            class="w-full bg-transparent text-right outline-none"
-          />
-        </div>
+        <span class="text-slate-400">{{ t('표시수', 'Rows') }}</span>
+        <input v-model.number="pageSizeInput" type="number" min="1" max="500" class="w-16 border border-white/15 bg-transparent px-2 py-1 text-right outline-none focus:border-cyan-400" />
       </div>
 
       <div class="overflow-x-auto">
-        <table class="w-full text-[14px] text-slate-200">
-          <thead class="border-b border-[#12314a] text-[13px] text-slate-400">
+        <table class="w-auto border-collapse text-[13px] text-slate-200">
+          <thead class="bg-white/[0.04] text-left text-slate-400">
             <tr>
-              <th class="sortable-th cursor-pointer select-none whitespace-nowrap px-[10px] py-3 text-left" @click="toggleSort('role')">{{ t('유저역할', 'Role') }}<span class="sort-icon">{{ sortArrow('role') || ' ⇅' }}</span></th>
-              <th class="whitespace-nowrap px-[10px] py-3 text-left">{{ t('승인상태', 'Approval') }}</th>
-              <th class="sortable-th cursor-pointer select-none whitespace-nowrap px-[10px] py-3 text-left" @click="toggleSort('username')">{{ t('아이디', 'Username') }}<span class="sort-icon">{{ sortArrow('username') || ' ⇅' }}</span></th>
-              <th class="sortable-th cursor-pointer select-none whitespace-nowrap px-[10px] py-3 text-left" @click="toggleSort('name')">{{ t('회원이름', 'Name') }}<span class="sort-icon">{{ sortArrow('name') || ' ⇅' }}</span></th>
-              <th class="sortable-th cursor-pointer select-none whitespace-nowrap px-[10px] py-3 text-left" @click="toggleSort('referralCode')">{{ t('추천코드', 'Referral Code') }}<span class="sort-icon">{{ sortArrow('referralCode') || ' ⇅' }}</span></th>
-              <th v-if="showTopCode" class="sortable-th cursor-pointer select-none whitespace-nowrap px-[10px] py-3 text-left" @click="toggleSort('topCode')">{{ t('최상위코드', 'Top Code') }}<span class="sort-icon">{{ sortArrow('topCode') || ' ⇅' }}</span></th>
-              <th class="sortable-th cursor-pointer select-none whitespace-nowrap px-[10px] py-3 text-right" @click="toggleSort('balanceUsdt')">{{ t('보유금액', 'Balance') }}<span class="sort-icon">{{ sortArrow('balanceUsdt') || ' ⇅' }}</span></th>
-              <th class="sortable-th cursor-pointer select-none whitespace-nowrap px-[10px] py-3 text-right" @click="toggleSort('totalDepositKrw')">{{ t('총 입금액', 'Total Deposits') }}<span class="sort-icon">{{ sortArrow('totalDepositKrw') || ' ⇅' }}</span></th>
-              <th class="sortable-th cursor-pointer select-none whitespace-nowrap px-[10px] py-3 text-right" @click="toggleSort('totalWithdrawKrw')">{{ t('총 출금액', 'Total Withdrawals') }}<span class="sort-icon">{{ sortArrow('totalWithdrawKrw') || ' ⇅' }}</span></th>
-              <th class="sortable-th cursor-pointer select-none whitespace-nowrap px-[10px] py-3 text-right" @click="toggleSort('cumulativeProfit')">{{ t('누적수익', 'Cumulative PnL') }}<span class="sort-icon">{{ sortArrow('cumulativeProfit') || ' ⇅' }}</span></th>
-              <th class="sortable-th cursor-pointer select-none whitespace-nowrap px-[10px] py-3 text-left" @click="toggleSort('created_at')">{{ t('가입일', 'Joined') }}<span class="sort-icon">{{ sortArrow('created_at') || ' ⇅' }}</span></th>
-              <th class="sortable-th cursor-pointer select-none whitespace-nowrap px-[10px] py-3 text-left" @click="toggleSort('last_login')">{{ t('최근 접속일', 'Last Login') }}<span class="sort-icon">{{ sortArrow('last_login') || ' ⇅' }}</span></th>
-              <th class="sortable-th cursor-pointer select-none whitespace-nowrap px-[10px] py-3 text-left" @click="toggleSort('online')">{{ t('접속여부', 'Status') }}<span class="sort-icon">{{ sortArrow('online') || ' ⇅' }}</span></th>
+              <th class="w-10 whitespace-nowrap border border-white/10 px-2 py-1 text-center font-normal">#</th>
+              <th class="sortable-th cursor-pointer select-none whitespace-nowrap border border-white/10 px-2 py-1 font-normal" @click="toggleSort('role')">{{ t('유저역할', 'Role') }}<span class="sort-icon">{{ sortArrow('role') || ' ⇅' }}</span></th>
+              <th class="whitespace-nowrap border border-white/10 px-2 py-1 font-normal">{{ t('승인상태', 'Approval') }}</th>
+              <th class="sortable-th cursor-pointer select-none whitespace-nowrap border border-white/10 px-2 py-1 font-normal" @click="toggleSort('username')">{{ t('아이디', 'Username') }}<span class="sort-icon">{{ sortArrow('username') || ' ⇅' }}</span></th>
+              <th class="sortable-th cursor-pointer select-none whitespace-nowrap border border-white/10 px-2 py-1 font-normal" @click="toggleSort('name')">{{ t('회원이름', 'Name') }}<span class="sort-icon">{{ sortArrow('name') || ' ⇅' }}</span></th>
+              <th class="sortable-th cursor-pointer select-none whitespace-nowrap border border-white/10 px-2 py-1 font-normal" @click="toggleSort('referralCode')">{{ t('추천코드', 'Referral') }}<span class="sort-icon">{{ sortArrow('referralCode') || ' ⇅' }}</span></th>
+              <th v-if="showTopCode" class="sortable-th cursor-pointer select-none whitespace-nowrap border border-white/10 px-2 py-1 font-normal" @click="toggleSort('topCode')">{{ t('최상위코드', 'Top Code') }}<span class="sort-icon">{{ sortArrow('topCode') || ' ⇅' }}</span></th>
+              <th class="sortable-th cursor-pointer select-none whitespace-nowrap border border-white/10 px-2 py-1 text-right font-normal" @click="toggleSort('balanceUsdt')">{{ t('보유금액', 'Balance') }}<span class="sort-icon">{{ sortArrow('balanceUsdt') || ' ⇅' }}</span></th>
+              <th class="sortable-th cursor-pointer select-none whitespace-nowrap border border-white/10 px-2 py-1 text-right font-normal" @click="toggleSort('totalDepositKrw')">{{ t('총 입금액', 'Deposits') }}<span class="sort-icon">{{ sortArrow('totalDepositKrw') || ' ⇅' }}</span></th>
+              <th class="sortable-th cursor-pointer select-none whitespace-nowrap border border-white/10 px-2 py-1 text-right font-normal" @click="toggleSort('totalWithdrawKrw')">{{ t('총 출금액', 'Withdrawals') }}<span class="sort-icon">{{ sortArrow('totalWithdrawKrw') || ' ⇅' }}</span></th>
+              <th class="sortable-th cursor-pointer select-none whitespace-nowrap border border-white/10 px-2 py-1 text-right font-normal" @click="toggleSort('cumulativeProfit')">{{ t('누적수익', 'Cum. PnL') }}<span class="sort-icon">{{ sortArrow('cumulativeProfit') || ' ⇅' }}</span></th>
+              <th class="sortable-th cursor-pointer select-none whitespace-nowrap border border-white/10 px-2 py-1 font-normal" @click="toggleSort('created_at')">{{ t('가입일', 'Joined') }}<span class="sort-icon">{{ sortArrow('created_at') || ' ⇅' }}</span></th>
+              <th class="sortable-th cursor-pointer select-none whitespace-nowrap border border-white/10 px-2 py-1 font-normal" @click="toggleSort('last_login')">{{ t('최근 접속일', 'Last Login') }}<span class="sort-icon">{{ sortArrow('last_login') || ' ⇅' }}</span></th>
+              <th class="sortable-th cursor-pointer select-none whitespace-nowrap border border-white/10 px-2 py-1 font-normal" @click="toggleSort('online')">{{ t('접속여부', 'Status') }}<span class="sort-icon">{{ sortArrow('online') || ' ⇅' }}</span></th>
             </tr>
           </thead>
           <tbody>
-            <tr v-if="!loading && filtered.length === 0" class="border-b border-[#0d2438]">
-              <td colspan="13" class="px-[10px] py-8 text-center text-slate-500">{{ t('데이터가 없습니다.', 'No data available.') }}</td>
+            <tr v-if="!loading && filtered.length === 0">
+              <td colspan="14" class="border border-white/10 px-2 py-6 text-center text-slate-500">{{ t('데이터가 없습니다.', 'No data available.') }}</td>
             </tr>
-            <tr v-for="u in paged" :key="u.id" class="border-b border-[#0d2438] hover:bg-white/[0.02]">
-              <td class="px-[10px] py-3">
+            <tr v-for="(u, ui) in paged" :key="u.id" class="hover:bg-white/[0.03]">
+              <td class="border border-white/10 px-2 py-1 text-center font-mono text-slate-500">{{ (page - 1) * pageSize + ui + 1 }}</td>
+              <td class="border border-white/10 p-0">
                 <select
                   v-if="canEditRoleOf(u)"
                   v-model="roleDraft[u.id]"
-                  class="w-28 rounded-md border border-[#173753] bg-[#041425] px-2 py-1 text-[12px] text-slate-200 outline-none"
+                  class="w-28 bg-transparent px-2 py-1 text-slate-100 outline-none focus:bg-black/40 [&>option]:bg-[#0b1726]"
                   :disabled="grantingId === u.id"
                   @change="onRoleSelectChange(u)"
                 >
@@ -82,91 +71,82 @@
                   <option v-for="r in grantableRoles" :key="r.id" :value="r.id">{{ r.label }}</option>
                   <option v-if="me?.role === 'super_admin'" value="super_admin">{{ t('최고관리자', 'Super Admin') }}</option>
                 </select>
-                <span v-else class="rounded bg-white/5 px-2 py-1 text-[12px] font-semibold text-slate-100 ring-1 ring-white/10">{{ u.role }}</span>
+                <span v-else class="block px-2 py-1 text-slate-100">{{ u.role }}</span>
               </td>
-              <td class="px-[10px] py-3">
-                <span class="rounded bg-white/10 px-2 py-1 text-[12px] font-semibold text-slate-100 ring-1 ring-white/10">{{ t('승인', 'Approved') }}</span>
+              <!-- 승인상태: 승인 / 거절 / 대기 중 하나를 누른다(지금 상태가 색으로 표시) -->
+              <td class="whitespace-nowrap border border-white/10 px-2 py-1">
+                <template v-if="canEditBalance && u.roleId !== 'super_admin'">
+                  <button
+                    v-for="st in APPROVAL_OPTIONS"
+                    :key="st.key"
+                    type="button"
+                    class="mr-1 border px-2 py-0.5 text-[12px] last:mr-0 disabled:opacity-40"
+                    :class="(u.approvalStatus || 'approved') === st.key ? st.on : 'border-white/20 bg-white/[0.06] text-slate-400 hover:bg-white/10'"
+                    :disabled="approvalSavingId === u.id"
+                    @click="setApproval(u, st.key)"
+                  >
+                    {{ t(st.ko, st.en) }}
+                  </button>
+                </template>
+                <span v-else :class="approvalText(u.approvalStatus).cls">{{ t(approvalText(u.approvalStatus).ko, approvalText(u.approvalStatus).en) }}</span>
               </td>
-              <td class="whitespace-nowrap px-[10px] py-3 font-data text-slate-100">
-                <button type="button" class="underline-offset-4 hover:text-cyan-300 hover:underline" @click="memberInfoModal?.open(u.username)">
-                  {{ u.username }}
-                </button>
+              <td class="whitespace-nowrap border border-white/10 px-2 py-1 font-mono text-slate-100">
+                <button type="button" class="underline-offset-4 hover:text-cyan-300 hover:underline" @click="memberInfoModal?.open(u.username)">{{ u.username }}</button>
               </td>
-              <td class="whitespace-nowrap px-[10px] py-3 text-slate-200">{{ u.name }}</td>
-              <td class="whitespace-nowrap px-[10px] py-3 font-data text-slate-300">{{ u.referralCode || '—' }}</td>
-              <td v-if="showTopCode" class="whitespace-nowrap px-[10px] py-3 font-data text-slate-300">{{ u.topCode || '—' }}</td>
-              <td class="whitespace-nowrap px-[10px] py-3 text-right font-data">
-                <button
-                  v-if="canEditBalance"
-                  type="button"
-                  class="rounded bg-cyan-500/10 px-2 py-1 text-cyan-100 ring-1 ring-cyan-400/20 hover:bg-cyan-500/15"
-                  @click="openBalanceModal(u)"
-                >
-                  {{ fmtBal(u.balanceUsdt) }}
-                </button>
-                <span v-else class="px-2 py-1 text-slate-300">{{ fmtBal(u.balanceUsdt) }}</span>
+              <td class="whitespace-nowrap border border-white/10 px-2 py-1 text-slate-200">{{ u.name }}</td>
+              <td class="whitespace-nowrap border border-white/10 px-2 py-1 font-mono text-slate-300">{{ u.referralCode || '—' }}</td>
+              <td v-if="showTopCode" class="whitespace-nowrap border border-white/10 px-2 py-1 font-mono text-slate-500">{{ u.topCode || '—' }}</td>
+              <td class="whitespace-nowrap border border-white/10 px-2 py-1 text-right font-mono">
+                <button v-if="canEditBalance" type="button" class="border border-white/20 bg-white/[0.06] px-2 py-0.5 text-cyan-100 hover:bg-white/10" @click="openBalanceModal(u)">{{ fmtBal(u.balanceUsdt) }}</button>
+                <span v-else class="text-slate-300">{{ fmtBal(u.balanceUsdt) }}</span>
               </td>
-              <td class="whitespace-nowrap px-[10px] py-3 text-right font-data text-slate-200">{{ isStaff(u) ? '-' : fmtKrw(u.totalDepositKrw) }}</td>
-              <td class="whitespace-nowrap px-[10px] py-3 text-right font-data text-slate-200">{{ isStaff(u) ? '-' : fmtKrw(u.totalWithdrawKrw) }}</td>
-              <td class="whitespace-nowrap px-[10px] py-3 text-right font-data">
-                <span v-if="isStaff(u)" class="px-2 py-1 text-slate-200">-</span>
+              <td class="whitespace-nowrap border border-white/10 px-2 py-1 text-right font-mono text-slate-200">{{ isStaff(u) ? '-' : fmtKrw(u.totalDepositKrw) }}</td>
+              <td class="whitespace-nowrap border border-white/10 px-2 py-1 text-right font-mono text-slate-200">{{ isStaff(u) ? '-' : fmtKrw(u.totalWithdrawKrw) }}</td>
+              <td class="whitespace-nowrap border border-white/10 px-2 py-1 text-right font-mono">
+                <span v-if="isStaff(u)" class="text-slate-200">-</span>
                 <button
                   v-else
                   type="button"
-                  class="rounded px-2 py-1 ring-1"
-                  :class="
-                    u.cumulativeProfit >= 0
-                      ? 'bg-rose-500/10 text-rose-300 ring-rose-400/20 hover:bg-rose-500/15'
-                      : 'bg-sky-500/10 text-sky-300 ring-sky-400/20 hover:bg-sky-500/15'
-                  "
+                  class="border border-white/20 bg-white/[0.06] px-2 py-0.5 hover:bg-white/10"
+                  :class="u.cumulativeProfit >= 0 ? 'text-rose-300' : 'text-sky-300'"
                   @click="openTradeModal(u)"
                 >
                   {{ signedProfitKrw(u.cumulativeProfit) }}
                 </button>
               </td>
-              <td class="whitespace-nowrap px-[10px] py-3 font-data text-slate-300">{{ dateOnly(u.created_at) }}</td>
-              <td class="whitespace-nowrap px-[10px] py-3 font-data text-slate-300">{{ u.last_login ? dateOnly(u.last_login) : '—' }}</td>
-              <td class="whitespace-nowrap px-[10px] py-3">
-                <span
-                  class="rounded px-2 py-1 text-[12px] font-semibold ring-1"
-                  :class="u.online ? 'bg-[#0c2c26] text-[#22ab94] ring-[#089981]/30' : 'bg-white/5 text-slate-300 ring-white/10'"
-                >
-                  {{ u.online ? t('접속', 'Online') : t('미접속', 'Offline') }}
-                </span>
+              <td class="whitespace-nowrap border border-white/10 px-2 py-1 font-mono text-slate-400">{{ dateOnly(u.created_at) }}</td>
+              <td class="whitespace-nowrap border border-white/10 px-2 py-1 font-mono text-slate-400">{{ u.last_login ? dateOnly(u.last_login) : '—' }}</td>
+              <td class="whitespace-nowrap border border-white/10 px-2 py-1" :class="u.online ? 'text-[#22ab94]' : 'text-slate-500'">
+                {{ u.online ? t('● 접속', '● Online') : t('○ 미접속', '○ Offline') }}
               </td>
             </tr>
           </tbody>
         </table>
       </div>
 
-      <div class="flex items-center justify-between gap-3">
-        <div class="text-sm text-slate-400">{{ t(`페이지 ${page} / ${totalPages} · 총 ${filtered.length}명`, `Page ${page} / ${totalPages} · ${filtered.length} total`) }}</div>
-        <div class="flex items-center justify-center gap-2" v-if="totalPages > 1">
-        <button class="rounded bg-white/5 px-3 py-1.5 text-sm hover:bg-white/10 disabled:opacity-30" :disabled="page <= 1" @click="page = 1">«</button>
-        <button class="rounded bg-white/5 px-3 py-1.5 text-sm hover:bg-white/10 disabled:opacity-30" :disabled="page <= 1" @click="page--">‹</button>
-        <button
-          v-for="p in pageNumbers"
-          :key="`member-page-${p}`"
-          class="min-w-9 rounded px-3 py-1.5 text-center text-sm"
-          :class="p === page ? 'bg-white/10 text-white' : 'bg-white/5 text-slate-300 hover:bg-white/10'"
-          @click="page = p"
-        >
-          {{ p }}
-        </button>
-        <span v-if="showPageTail" class="px-1 text-sm text-slate-500">~</span>
-        <button
-          v-if="showPageTail"
-          class="min-w-9 rounded bg-white/5 px-3 py-1.5 text-center text-sm text-slate-300 hover:bg-white/10"
-          @click="page = totalPages"
-        >
-          {{ totalPages }}
-        </button>
-        <button class="rounded bg-white/5 px-3 py-1.5 text-sm hover:bg-white/10 disabled:opacity-30" :disabled="page >= totalPages" @click="page++">›</button>
-        <button class="rounded bg-white/5 px-3 py-1.5 text-sm hover:bg-white/10 disabled:opacity-30" :disabled="page >= totalPages" @click="page = totalPages">»</button>
+      <div class="flex items-center justify-between gap-3 text-[13px]">
+        <div class="text-slate-400">{{ t(`페이지 ${page} / ${totalPages} · 총 ${filtered.length}명`, `Page ${page} / ${totalPages} · ${filtered.length} total`) }}</div>
+        <div v-if="totalPages > 1" class="flex items-center gap-1">
+          <button type="button" class="min-w-7 border border-white/20 bg-white/[0.06] px-2 py-0.5 hover:bg-white/10 disabled:opacity-30" :disabled="page <= 1" @click="page = 1">«</button>
+          <button type="button" class="min-w-7 border border-white/20 bg-white/[0.06] px-2 py-0.5 hover:bg-white/10 disabled:opacity-30" :disabled="page <= 1" @click="page--">‹</button>
+          <button
+            v-for="p in pageNumbers"
+            :key="`member-page-${p}`"
+            type="button"
+            class="min-w-7 border border-white/20 bg-white/[0.06] px-2 py-0.5 hover:bg-white/10"
+            :class="p === page ? '!bg-cyan-500/30 text-white' : ''"
+            @click="page = p"
+          >
+            {{ p }}
+          </button>
+          <span v-if="showPageTail" class="px-1 text-slate-500">~</span>
+          <button v-if="showPageTail" type="button" class="min-w-7 border border-white/20 bg-white/[0.06] px-2 py-0.5 hover:bg-white/10" @click="page = totalPages">{{ totalPages }}</button>
+          <button type="button" class="min-w-7 border border-white/20 bg-white/[0.06] px-2 py-0.5 hover:bg-white/10 disabled:opacity-30" :disabled="page >= totalPages" @click="page++">›</button>
+          <button type="button" class="min-w-7 border border-white/20 bg-white/[0.06] px-2 py-0.5 hover:bg-white/10 disabled:opacity-30" :disabled="page >= totalPages" @click="page = totalPages">»</button>
+        </div>
       </div>
-      </div>
-
-      <p v-if="error" class="mt-3 text-sm text-rose-300">{{ error }}</p>
+      <p v-if="error" class="text-[13px] text-rose-300">{{ error }}</p>
+      <p v-if="approvalError" class="text-[13px] text-rose-300">{{ approvalError }}</p>
     </div>
 
     <AdminMemberInfoModal ref="memberInfoModal" @saved="load(true)" />
@@ -359,6 +339,7 @@ type MemberRow = {
   role: string
   roleId: string
   approved: boolean
+  approvalStatus?: 'approved' | 'pending' | 'rejected' | string
   username: string
   name: string
   birthDate: string
@@ -423,6 +404,35 @@ let loadingNow = false
 // 최상위코드는 기본으로 숨김, 총관리자(admin)는 항상 보이고 부관리자는 역할 권한의 "최상위코드 보이기"가 켜져 있을 때만 보인다.
 const showTopCode = computed(() => me.value?.role === 'super_admin' || (me.value as any)?.permissions?.menus?.members?.showTopCode === true)
 // 총관리자는 항상 가능, 부관리자는 총관리자가 부여한 "회원 목록" 수정 권한이 있을 때만
+// ── 가입 승인상태(승인 / 거절 / 대기) ──
+const APPROVAL_OPTIONS = [
+  { key: 'approved', ko: '승인', en: 'Approved', on: 'border-emerald-400/60 bg-emerald-500/20 text-emerald-200' },
+  { key: 'rejected', ko: '거절', en: 'Rejected', on: 'border-rose-400/60 bg-rose-500/20 text-rose-200' },
+  { key: 'pending', ko: '대기', en: 'Pending', on: 'border-amber-400/60 bg-amber-500/20 text-amber-200' }
+] as const
+function approvalText(st?: string) {
+  if (st === 'pending') return { ko: '대기', en: 'Pending', cls: 'text-amber-300' }
+  if (st === 'rejected') return { ko: '거절', en: 'Rejected', cls: 'text-rose-300' }
+  return { ko: '승인', en: 'Approved', cls: 'text-emerald-300' }
+}
+const approvalSavingId = ref<number | null>(null)
+const approvalError = ref<string | null>(null)
+async function setApproval(u: MemberRow, status: 'approved' | 'rejected' | 'pending') {
+  if ((u.approvalStatus || 'approved') === status || approvalSavingId.value) return
+  approvalSavingId.value = u.id
+  approvalError.value = null
+  const prev = u.approvalStatus
+  u.approvalStatus = status
+  try {
+    await $fetch('/api/admin/members/approval', { method: 'POST', body: { userId: u.id, status } })
+  } catch (e: any) {
+    u.approvalStatus = prev
+    approvalError.value = e?.data?.statusMessage || t('승인상태를 바꾸지 못했습니다.', 'Failed to change approval.')
+  } finally {
+    approvalSavingId.value = null
+  }
+}
+
 const canEditBalance = computed(() => {
   if (me.value?.role === 'super_admin') return true
   if (me.value?.role && me.value.role !== 'user') return Boolean((me.value as any)?.permissions?.menus?.members?.edit)
