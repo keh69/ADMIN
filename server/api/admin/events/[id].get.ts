@@ -41,6 +41,8 @@ export default defineEventHandler(async (event) => {
       // 사이트별 진행(체크하면 그 사이트에 이벤트 메뉴가 보이고 진행)
       enabledTest: row.site === 'all' ? !!row.enabled_test : row.site === 'test' && !!row.enabled,
       enabledKtx: row.site === 'all' ? !!row.enabled_ktx : row.site === 'ktx' && !!row.enabled,
+      // 이벤트 페이지 첫 화면 픽셀아트 어셋(1~10)
+      asset: Math.min(10, Math.max(1, Number(row.asset) || 1)),
       closeDow: Number(row.close_dow) || 0,
       closeTime: String(row.close_time || '00:00'),
       label: eventMenuLabel(row),

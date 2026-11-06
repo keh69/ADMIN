@@ -73,8 +73,9 @@
         <!-- 이벤트 설정 -->
         <section class="space-y-4 rounded-2xl border border-white/10 bg-white/5 p-5">
           <h2 class="text-base font-semibold">{{ t('이벤트 설정', 'Event settings') }}</h2>
-          <!-- 사이트별 진행: 체크하면 그 사이트 회원 화면에 이벤트 메뉴가 보이고 이벤트가 진행된다 -->
-          <div class="space-y-2">
+          <!-- 왼쪽: 사이트별 진행(체크하면 그 사이트 회원 화면에 이벤트 메뉴가 보이고 진행) / 오른쪽: 이벤트 페이지 첫 화면 어셋 -->
+          <div class="flex flex-wrap items-start gap-6">
+          <div class="min-w-0 flex-1 space-y-2">
             <label class="flex items-center gap-2 text-sm text-slate-200">
               <input v-model="draft.enabledTest" type="checkbox" class="h-4 w-4 accent-sky-500" />
               {{ t('테스트(진행)', 'Test (running)') }}
@@ -84,6 +85,19 @@
               {{ t('거래소(진행)', 'Exchange (running)') }}
             </label>
             <p class="text-xs text-slate-500">{{ t('체크한 사이트에 이벤트 탭이 보이고 진행됩니다. 두 사이트를 모두 체크해도 상금은 회차마다 한 번만 지급됩니다.', 'Checked sites show the event tab. Prizes are paid once per round even if both are checked.') }}</p>
+          </div>
+          <div class="flex items-start gap-3">
+            <div>
+              <label class="text-sm text-slate-300">{{ t('어셋', 'Asset') }}</label>
+              <select v-model.number="draft.asset" class="mt-1 block rounded-lg bg-[#0b1726] px-3 py-2 text-sm outline-none ring-1 ring-white/10 focus:ring-cyan-500">
+                <option v-for="a in PIXEL_ASSET_NAMES" :key="a.id" :value="a.id">{{ t(`어셋${a.id} · ${a.name}`, `Asset ${a.id} · ${a.nameEn}`) }}</option>
+              </select>
+              <p class="mt-1 text-[11px] text-slate-500">{{ t('이벤트 페이지 첫 화면 그림', 'Event page hero art') }}</p>
+            </div>
+            <div class="flex h-24 w-20 items-end justify-center rounded-lg bg-black/40 p-1.5">
+              <PixelAsset :asset="draft.asset" class="h-full w-full" />
+            </div>
+          </div>
           </div>
           <div>
             <label class="text-sm text-slate-300">{{ t('이벤트 종류 (순위 기준)', 'Event type (ranked by)') }}</label>
@@ -268,6 +282,7 @@
 
 <script setup lang="ts">
 definePageMeta({ middleware: ['admin', 'super-admin'] })
+import { PIXEL_ASSET_NAMES } from '~/utils/pixelAssets'
 
 type Prize = { rank: string; reward: string }
 type KindMeta = { key: string; label: string; score: string; unit: string; decimals: number; desc: string }
@@ -286,6 +301,7 @@ type Detail = {
     enabled: boolean
     enabledTest: boolean
     enabledKtx: boolean
+    asset: number
     closeDow: number
     closeTime: string
     label: string
@@ -312,13 +328,14 @@ const tabs = computed(() => [
   { key: 'settings' as const, label: t('이벤트 설정', 'Event settings') },
   { key: 'message' as const, label: t('당첨쪽지', 'Winning message') }
 ])
-const draft = reactive<{ title: string; description: string; titleEn: string; descriptionEn: string; enabledTest: boolean; enabledKtx: boolean; kind: string; closeDow: number; closeTime: string; prizes: Prize[] }>({
+const draft = reactive<{ title: string; description: string; titleEn: string; descriptionEn: string; enabledTest: boolean; enabledKtx: boolean; asset: number; kind: string; closeDow: number; closeTime: string; prizes: Prize[] }>({
   title: '',
   description: '',
   titleEn: '',
   descriptionEn: '',
   enabledTest: false,
   enabledKtx: false,
+  asset: 1,
   kind: 'weekly_volume',
   closeDow: 0,
   closeTime: '00:00',
@@ -371,6 +388,7 @@ async function load(resetDraft = true) {
       draft.descriptionEn = res.event.descriptionEn || ''
       draft.enabledTest = !!res.event.enabledTest
       draft.enabledKtx = !!res.event.enabledKtx
+      draft.asset = Number(res.event.asset) || 1
       draft.kind = res.event.kind
       draft.closeDow = res.event.closeDow
       draft.closeTime = res.event.closeTime
@@ -400,6 +418,7 @@ async function save() {
         descriptionEn: draft.descriptionEn,
         enabledTest: draft.enabledTest,
         enabledKtx: draft.enabledKtx,
+        asset: Number(draft.asset) || 1,
         kind: draft.kind,
         closeDow: Number(draft.closeDow) || 0,
         closeTime: draft.closeTime || '00:00',

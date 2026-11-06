@@ -13,6 +13,8 @@ const BodySchema = z.object({
   // 사이트별 진행: 테스트(진행) / 거래소(진행)
   enabledTest: z.boolean(),
   enabledKtx: z.boolean(),
+  // 이벤트 페이지 첫 화면 픽셀아트 어셋(1~10)
+  asset: z.number().int().min(1).max(10).optional().default(1),
   kind: z.string().refine(isEventKind, '이벤트 종류가 올바르지 않습니다.'),
   // 마감: 매주 closeDow(0=월~6=일) closeTime(HH:MM, 한국시간)
   closeDow: z.number().int().min(0).max(6),
@@ -51,6 +53,7 @@ export default defineEventHandler(async (event) => {
     enabled_test: b.enabledTest,
     enabled_ktx: b.enabledKtx,
     kind: b.kind,
+    asset: b.asset,
     close_dow: b.closeDow,
     close_time: closeTime,
     prizes: b.prizes.map((p) => ({ rank: p.rank.replace(/\s+/g, ''), reward: p.reward })),
