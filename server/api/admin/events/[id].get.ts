@@ -38,6 +38,9 @@ export default defineEventHandler(async (event) => {
       descriptionEn: String(row.description_en || ''),
       prizes: Array.isArray(row.prizes) ? row.prizes : [],
       enabled: !!row.enabled,
+      // 사이트별 진행(체크하면 그 사이트에 이벤트 메뉴가 보이고 진행)
+      enabledTest: row.site === 'all' ? !!row.enabled_test : row.site === 'test' && !!row.enabled,
+      enabledKtx: row.site === 'all' ? !!row.enabled_ktx : row.site === 'ktx' && !!row.enabled,
       closeDow: Number(row.close_dow) || 0,
       closeTime: String(row.close_time || '00:00'),
       label: eventMenuLabel(row),

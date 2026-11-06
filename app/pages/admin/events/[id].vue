@@ -13,11 +13,11 @@
           <div>
             <div class="flex items-center gap-2">
               <h1 class="text-xl font-semibold">{{ detail.event.label }}</h1>
-              <span class="rounded px-2 py-0.5 text-xs font-semibold" :class="detail.event.site === 'test' ? 'bg-sky-500/20 text-sky-300' : 'bg-amber-500/20 text-amber-300'">
-                {{ detail.event.site === 'test' ? t('테스트 사이트', 'Test site') : t('거래소', 'Exchange') }}
+              <span class="rounded px-2 py-0.5 text-xs font-semibold" :class="detail.event.enabledTest ? 'bg-sky-500/20 text-sky-300' : 'bg-white/10 text-slate-500'">
+                {{ t('테스트', 'Test') }} {{ detail.event.enabledTest ? t('진행', 'on') : t('중지', 'off') }}
               </span>
-              <span class="rounded px-2 py-0.5 text-xs font-semibold" :class="detail.event.enabled ? 'bg-emerald-500/20 text-emerald-300' : 'bg-white/10 text-slate-400'">
-                {{ detail.event.enabled ? t('진행 중', 'Running') : t('중지됨', 'Stopped') }}
+              <span class="rounded px-2 py-0.5 text-xs font-semibold" :class="detail.event.enabledKtx ? 'bg-amber-500/20 text-amber-300' : 'bg-white/10 text-slate-500'">
+                {{ t('거래소', 'Exchange') }} {{ detail.event.enabledKtx ? t('진행', 'on') : t('중지', 'off') }}
               </span>
             </div>
             <p class="mt-1 text-sm text-slate-400">
@@ -39,12 +39,12 @@
           >
             <span class="flex items-center gap-2">
               <span class="font-semibold">{{ e.label }}</span>
-              <span class="rounded px-1.5 py-0.5 text-[11px] font-semibold" :class="e.site === 'test' ? 'bg-sky-500/20 text-sky-300' : 'bg-amber-500/20 text-amber-300'">{{ e.site === 'test' ? t('테스트', 'Test') : t('거래소', 'Exchange') }}</span>
               <span class="text-slate-400">{{ e.title }}</span>
             </span>
             <span class="flex items-center gap-2 text-xs">
               <span class="text-slate-500">{{ e.kindLabel }}</span>
-              <span :class="e.enabled ? 'text-emerald-300' : 'text-slate-500'">{{ e.enabled ? t('진행 중', 'Running') : t('중지됨', 'Stopped') }}</span>
+              <span :class="e.enabledTest ? 'text-sky-300' : 'text-slate-600'">{{ t('테스트', 'Test') }} {{ e.enabledTest ? t('진행', 'on') : t('중지', 'off') }}</span>
+              <span :class="e.enabledKtx ? 'text-amber-300' : 'text-slate-600'">{{ t('거래소', 'Exchange') }} {{ e.enabledKtx ? t('진행', 'on') : t('중지', 'off') }}</span>
             </span>
           </button>
           <div class="mt-1 border-t border-white/10 px-2 pt-2">
@@ -73,10 +73,18 @@
         <!-- 이벤트 설정 -->
         <section class="space-y-4 rounded-2xl border border-white/10 bg-white/5 p-5">
           <h2 class="text-base font-semibold">{{ t('이벤트 설정', 'Event settings') }}</h2>
-          <label class="flex items-center gap-2 text-sm text-slate-200">
-            <input v-model="draft.enabled" type="checkbox" class="h-4 w-4 accent-emerald-500" />
-            {{ t('회원 화면에 이벤트 보이기(진행)', 'Show to members (running)') }}
-          </label>
+          <!-- 사이트별 진행: 체크하면 그 사이트 회원 화면에 이벤트 메뉴가 보이고 이벤트가 진행된다 -->
+          <div class="space-y-2">
+            <label class="flex items-center gap-2 text-sm text-slate-200">
+              <input v-model="draft.enabledTest" type="checkbox" class="h-4 w-4 accent-sky-500" />
+              {{ t('테스트(진행)', 'Test (running)') }}
+            </label>
+            <label class="flex items-center gap-2 text-sm text-slate-200">
+              <input v-model="draft.enabledKtx" type="checkbox" class="h-4 w-4 accent-amber-500" />
+              {{ t('거래소(진행)', 'Exchange (running)') }}
+            </label>
+            <p class="text-xs text-slate-500">{{ t('체크한 사이트에 이벤트 탭이 보이고 진행됩니다. 두 사이트를 모두 체크해도 상금은 회차마다 한 번만 지급됩니다.', 'Checked sites show the event tab. Prizes are paid once per round even if both are checked.') }}</p>
+          </div>
           <div>
             <label class="text-sm text-slate-300">{{ t('이벤트 종류 (순위 기준)', 'Event type (ranked by)') }}</label>
             <select v-model="draft.kind" class="mt-1 w-full rounded-lg bg-[#0b1726] px-3 py-2 text-sm outline-none ring-1 ring-white/10 focus:ring-cyan-500">
@@ -276,6 +284,8 @@ type Detail = {
     descriptionEn: string
     prizes: Prize[]
     enabled: boolean
+    enabledTest: boolean
+    enabledKtx: boolean
     closeDow: number
     closeTime: string
     label: string
@@ -286,7 +296,7 @@ type Detail = {
   ranking: Array<{ rank: number; userId: number; username: string; score: number; volume: number; trades: number }>
   payouts: Array<{ periodFrom: string; periodTo: string; userId: number; username: string; rank: number; score: number; amount: number; messageSent: boolean; paidAt: string }>
 }
-type EventItem = { id: number; site: string; code: string; label: string; title: string; kind: string; kindLabel: string; enabled: boolean }
+type EventItem = { id: number; site: string; code: string; label: string; title: string; kind: string; kindLabel: string; enabled: boolean; enabledTest: boolean; enabledKtx: boolean }
 
 const { t } = useLocale()
 const route = useRoute()
@@ -302,12 +312,13 @@ const tabs = computed(() => [
   { key: 'settings' as const, label: t('이벤트 설정', 'Event settings') },
   { key: 'message' as const, label: t('당첨쪽지', 'Winning message') }
 ])
-const draft = reactive<{ title: string; description: string; titleEn: string; descriptionEn: string; enabled: boolean; kind: string; closeDow: number; closeTime: string; prizes: Prize[] }>({
+const draft = reactive<{ title: string; description: string; titleEn: string; descriptionEn: string; enabledTest: boolean; enabledKtx: boolean; kind: string; closeDow: number; closeTime: string; prizes: Prize[] }>({
   title: '',
   description: '',
   titleEn: '',
   descriptionEn: '',
-  enabled: true,
+  enabledTest: false,
+  enabledKtx: false,
   kind: 'weekly_volume',
   closeDow: 0,
   closeTime: '00:00',
@@ -358,7 +369,8 @@ async function load(resetDraft = true) {
       draft.description = res.event.description
       draft.titleEn = res.event.titleEn || ''
       draft.descriptionEn = res.event.descriptionEn || ''
-      draft.enabled = res.event.enabled
+      draft.enabledTest = !!res.event.enabledTest
+      draft.enabledKtx = !!res.event.enabledKtx
       draft.kind = res.event.kind
       draft.closeDow = res.event.closeDow
       draft.closeTime = res.event.closeTime
@@ -386,7 +398,8 @@ async function save() {
         description: draft.description,
         titleEn: draft.titleEn,
         descriptionEn: draft.descriptionEn,
-        enabled: draft.enabled,
+        enabledTest: draft.enabledTest,
+        enabledKtx: draft.enabledKtx,
         kind: draft.kind,
         closeDow: Number(draft.closeDow) || 0,
         closeTime: draft.closeTime || '00:00',

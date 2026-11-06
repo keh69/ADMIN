@@ -1,11 +1,14 @@
 import { getSupabaseAdminClient } from './supabase'
 import { supabaseAppDbEnabled } from './supa-appdb'
 
-// 이벤트는 테스트(keh69/test)와 거래소(keh69/KTX)가 같은 Supabase의 bitduck_events를 같이 쓰고, site 컬럼으로 나뉜다.
+// 이벤트는 테스트(keh69/test)와 거래소(keh69/KTX)가 같은 Supabase의 bitduck_events를 같이 쓴다.
+// site='all' 이벤트 하나가 두 사이트 공통이고, 사이트별 진행 여부는 enabled_test / enabled_ktx 로 정한다.
+// (예전 사이트별 행: site='test'|'ktx', 합치고 남은 행은 site='merged'로 보관)
 export const SITE_LABEL: Record<string, string> = { test: '테스트', ktx: '거래소' }
 
 export function eventMenuLabel(row: { name: string; site: string }) {
-  return `${row.name}(${SITE_LABEL[row.site] || row.site})`
+  if (row.site === 'all' || !SITE_LABEL[row.site]) return row.name
+  return `${row.name}(${SITE_LABEL[row.site]})`
 }
 
 // 이번 주(한국시간 월요일 00:00 ~ 다음 월요일 00:00). offsetWeeks=-1이면 지난주.

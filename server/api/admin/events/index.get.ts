@@ -12,9 +12,9 @@ export default defineEventHandler(async (event) => {
   await settleDueEventsThrottled()
   const { data, error } = await getSupabaseAdminClient()
     .from('bitduck_events')
-    .select('id, site, code, name, title, kind, enabled')
+    .select('id, site, code, name, title, kind, enabled, enabled_test, enabled_ktx')
+    .neq('site', 'merged') // 합치고 보관한 예전 행은 빼고
     .order('code', { ascending: true })
-    .order('site', { ascending: false }) // 같은 이벤트는 테스트 → 거래소 순
   if (error) throw error
   const num = (c: string) => Number(String(c).replace(/\D/g, '')) || 0
   const rows = (data || []).slice().sort((a: any, b: any) => num(a.code) - num(b.code) || String(b.site).localeCompare(String(a.site)))
@@ -28,6 +28,8 @@ export default defineEventHandler(async (event) => {
       kind: String(r.kind || 'weekly_volume'),
       kindLabel: isEventKind(r.kind) ? EVENT_KINDS[r.kind].ko : String(r.kind || ''),
       enabled: !!r.enabled,
+      enabledTest: r.site === 'all' ? !!r.enabled_test : r.site === 'test' && !!r.enabled,
+      enabledKtx: r.site === 'all' ? !!r.enabled_ktx : r.site === 'ktx' && !!r.enabled,
       label: eventMenuLabel(r)
     }))
   }
