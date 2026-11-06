@@ -210,7 +210,7 @@
                   <div class="mb-1 text-[12px] text-slate-400">{{ message.senderName }}</div>
                   <div class="whitespace-pre-wrap leading-6">
                     <template v-for="(part, pi) in splitMessageBody(message.body)" :key="pi">
-                      <a v-if="part.type === 'img'" :href="part.src" target="_blank" rel="noopener" class="my-1 block w-fit">
+                      <a v-if="part.type === 'img'" :href="part.src" class="my-1 block w-fit cursor-zoom-in" @click.prevent="previewImage = part.src">
                         <img :src="part.src" alt="" class="max-h-64 max-w-full rounded-lg border border-white/10 bg-white/5" @load="onChatImageLoad" />
                       </a>
                       <div v-else>{{ part.text }}</div>
@@ -716,7 +716,7 @@ const sendMessageText = ref<string | null>(null)
 // ── 고객센터 쪽지 이미지 첨부: Ctrl+V 붙여넣기 / [첨부파일 추가] (비회원 상담은 제외) ──
 type PendingImage = { id: number; dataUrl: string }
 const replyImages = ref<PendingImage[]>([])
-// 첨부한 그림(보내기 전 미리보기)을 누르면 크게 보여준다. 바깥을 누르거나 Esc로 닫힘.
+// 첨부한 그림(보내기 전 미리보기)과 대화창 안의 그림을 누르면 팝업으로 크게 보여준다. 바깥을 누르거나 Esc로 닫힘.
 const previewImage = ref<string | null>(null)
 function onPreviewKey(e: KeyboardEvent) {
   if (e.key === 'Escape' && previewImage.value) previewImage.value = null
