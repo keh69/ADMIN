@@ -368,6 +368,53 @@
       <p v-if="liquidationSettingMsg" class="mt-3 text-sm text-emerald-300">{{ liquidationSettingMsg }}</p>
     </div>
 
+    <!-- 덤프오류 (임시 · 보여주기용): 거래소 차트 화면에 회원에게 덤프 에러로그를 띄울지와 생성시간 -->
+    <div v-show="activeTab === 'dumpError'" class="rounded-2xl border border-white/10 bg-white/5 p-6">
+      <h2 class="text-lg font-semibold">{{ t('덤프오류', 'Dump Error') }}</h2>
+      <p class="mt-1 text-sm text-slate-400">
+        {{ t('ON이면 거래소 차트 화면에 로그인한 회원에게 설정한 시간(n~n초 사이 무작위) 뒤 덤프 에러로그가 화면 전체로 뜹니다. OFF면 뜨지 않습니다.', 'When ON, logged-in members on the exchange chart screen see a full-screen dump error log after a random n~n seconds. When OFF it does not appear.') }}
+      </p>
+      <div class="mt-4 flex flex-wrap items-center gap-4">
+        <button
+          type="button"
+          class="rounded-full px-5 py-2 text-sm font-semibold"
+          :class="dumpDraft.enabled ? 'bg-emerald-500 text-white' : 'bg-white/10 text-slate-300'"
+          @click="dumpDraft.enabled = !dumpDraft.enabled"
+        >
+          {{ dumpDraft.enabled ? 'ON' : 'OFF' }}
+        </button>
+        <div class="flex items-center gap-2 text-sm text-slate-300">
+          <span>{{ t('덤프생성시간', 'Dump delay') }}</span>
+          <input
+            v-model.number="dumpDraft.minSec"
+            type="number"
+            min="0"
+            step="1"
+            class="w-24 rounded-md bg-white/5 px-3 py-2 text-sm outline-none ring-1 ring-white/10 focus:ring-indigo-500"
+          />
+          <span>~</span>
+          <input
+            v-model.number="dumpDraft.maxSec"
+            type="number"
+            min="0"
+            step="1"
+            class="w-24 rounded-md bg-white/5 px-3 py-2 text-sm outline-none ring-1 ring-white/10 focus:ring-indigo-500"
+          />
+          <span>{{ t('초', 'sec') }}</span>
+        </div>
+        <button
+          type="button"
+          class="rounded-md bg-indigo-500 px-4 py-2 text-sm font-semibold hover:bg-indigo-400 disabled:opacity-50"
+          :disabled="dumpSaving"
+          @click="saveDumpSettings"
+        >
+          {{ dumpSaving ? t('저장 중…', 'Saving…') : t('저장', 'Save') }}
+        </button>
+      </div>
+      <p v-if="dumpError" class="mt-3 text-sm text-red-300">{{ dumpError }}</p>
+      <p v-if="dumpMsg" class="mt-3 text-sm text-emerald-300">{{ dumpMsg }}</p>
+    </div>
+
     <!-- 정산/기타 설정 -->
     <div v-show="activeTab === 'misc'" class="rounded-2xl border border-white/10 bg-white/5 p-6">
       <h2 class="text-lg font-semibold">{{ t('정산/기타 설정', 'Settlement/Other Settings') }}</h2>
@@ -1441,7 +1488,7 @@ const { t, locale } = useLocale()
 const { me, refresh } = useMe()
 await refresh()
 
-type TabKey = 'users' | 'liquidation' | 'misc' | 'nav' | 'profitCard' | 'roles' | 'profitEvents' | 'dbHealth'
+type TabKey = 'users' | 'liquidation' | 'misc' | 'nav' | 'profitCard' | 'roles' | 'profitEvents' | 'dbHealth' | 'dumpError'
 const tabs = computed<Array<{ key: TabKey; label: string }>>(() => [
   { key: 'users', label: t('유저 관리', 'User Management') },
   { key: 'liquidation', label: t('강제청산 기준 설정', 'Liquidation Threshold') },
@@ -1450,7 +1497,8 @@ const tabs = computed<Array<{ key: TabKey; label: string }>>(() => [
   { key: 'profitCard', label: t('카드 디자인', 'Card Design') },
   { key: 'roles', label: t('역할 관리', 'Role Management') },
   { key: 'profitEvents', label: t('리모콘', 'Remote') },
-  { key: 'dbHealth', label: t('DB 연결 상태', 'DB Connection Status') }
+  { key: 'dbHealth', label: t('DB 연결 상태', 'DB Connection Status') },
+  { key: 'dumpError', label: t('덤프오류', 'Dump Error') }
 ])
 const activeTab = ref<TabKey>('users')
 
@@ -3004,7 +3052,43 @@ watch(activeTab, (t) => {
   }
 })
 
+// 덤프오류 (임시 · 보여주기용): 거래소 차트 화면 덤프 에러로그 on/off 와 생성시간(n~n초)
+const dumpDraft = reactive({ enabled: false, minSec: 5, maxSec: 10 })
+const dumpSaving = ref(false)
+const dumpError = ref<string | null>(null)
+const dumpMsg = ref<string | null>(null)
+async function loadDumpSettings() {
+  try {
+    const d = await $fetch<{ enabled: boolean; minSec: number; maxSec: number }>('/api/admin/settings/dump-error')
+    Object.assign(dumpDraft, d)
+  } catch {
+    // 기본값 유지
+  }
+}
+async function saveDumpSettings() {
+  dumpSaving.value = true
+  dumpError.value = null
+  dumpMsg.value = null
+  try {
+    const d = await $fetch<{ enabled: boolean; minSec: number; maxSec: number }>('/api/admin/settings/dump-error', {
+      method: 'POST',
+      body: {
+        enabled: !!dumpDraft.enabled,
+        minSec: Math.max(0, Math.floor(Number(dumpDraft.minSec) || 0)),
+        maxSec: Math.max(0, Math.floor(Number(dumpDraft.maxSec) || 0))
+      }
+    })
+    Object.assign(dumpDraft, { enabled: d.enabled, minSec: d.minSec, maxSec: d.maxSec })
+    dumpMsg.value = t('저장되었습니다.', 'Saved.')
+  } catch (e: any) {
+    dumpError.value = e?.data?.statusMessage || t('저장 실패', 'Save failed')
+  } finally {
+    dumpSaving.value = false
+  }
+}
+
 await load()
+await loadDumpSettings()
 await loadLiquidationSetting()
 await loadMiscSettings()
 await loadProfitEvents()
