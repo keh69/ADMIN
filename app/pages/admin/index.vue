@@ -335,335 +335,263 @@
       </div>
     </div>
 
-    <!-- 강제청산 기준(%) 설정 -->
-    <div v-show="activeTab === 'liquidation'" class="rounded-2xl border border-white/10 bg-white/5 p-6">
-      <h2 class="text-lg font-semibold">{{ t('강제청산 기준 설정', 'Liquidation Threshold Settings') }}</h2>
-      <p class="mt-1 text-sm text-slate-400">
-        {{ t('손실률(ROE)이 이 값 이하로 떨어지면 모든 유저의 포지션이 실시간으로 자동 강제청산됩니다.', 'When ROE drops to or below this value, all users\' positions are automatically force-liquidated in real time.') }}
-      </p>
-      <div class="mt-4 flex flex-wrap items-center gap-3">
-        <div class="flex items-center gap-2">
-          <input
-            v-model.number="liquidationPercentDraft"
-            type="number"
-            min="1"
-            max="99"
-            step="1"
-            class="w-24 rounded-md bg-white/5 px-3 py-2 text-sm outline-none ring-1 ring-white/10 focus:ring-indigo-500"
-          />
-          <span class="text-sm text-slate-400">{{ t('% 손실 시 강제청산', '% loss triggers liquidation') }}</span>
-        </div>
-        <button
-          class="rounded-md bg-indigo-500 px-4 py-2 text-sm hover:bg-indigo-400 disabled:cursor-not-allowed disabled:opacity-50"
-          :disabled="liquidationSettingSaving"
-          @click="saveLiquidationSetting"
-        >
-          {{ t('저장', 'Save') }}
-        </button>
-        <span class="text-sm text-slate-400">{{ t(`현재 적용값: -${liquidationPercent}%`, `Current value: -${liquidationPercent}%`) }}</span>
+    <!-- ───────── 설정 화면 디자인 시안: 탭마다 다른 스타일(A~H). 마음에 드는 것을 고르면 나중에 하나로 통일한다. ───────── -->
+
+    <!-- 강제청산 기준(%) 설정 — 디자인 A · 목록형(chrome://flags 스타일): 굵은 제목 / 회색 설명 / 오른쪽 작은 입력칸 -->
+    <div v-show="activeTab === 'liquidation'" class="max-w-4xl">
+      <div class="mb-2 flex items-baseline justify-between gap-3">
+        <h2 class="text-base font-semibold text-slate-100">{{ t('강제청산 기준 설정', 'Liquidation Threshold Settings') }}</h2>
+        <span class="text-[11px] text-slate-500">{{ t('디자인 A · 목록형', 'Design A · Flags list') }}</span>
       </div>
-      <p v-if="liquidationSettingError" class="mt-3 text-sm text-red-300">{{ liquidationSettingError }}</p>
-      <p v-if="liquidationSettingMsg" class="mt-3 text-sm text-emerald-300">{{ liquidationSettingMsg }}</p>
+      <div class="divide-y divide-white/10 border-y border-white/10">
+        <div class="flex items-start justify-between gap-6 py-4">
+          <div class="min-w-0">
+            <div class="text-sm font-semibold text-slate-100">{{ t('강제청산 손실률', 'Liquidation loss rate') }}</div>
+            <p class="mt-1 text-[13px] leading-5 text-slate-400">
+              {{ t('손실률(ROE)이 이 값 이하로 떨어지면 모든 유저의 포지션이 실시간으로 자동 강제청산됩니다.', 'When ROE drops to or below this value, all users\' positions are automatically force-liquidated in real time.') }}
+            </p>
+            <div class="mt-1 font-mono text-[12px] text-cyan-300/80">#liquidation-roe · {{ t(`현재 적용값 -${liquidationPercent}%`, `current -${liquidationPercent}%`) }}</div>
+          </div>
+          <div class="flex shrink-0 items-center gap-2">
+            <div class="flex items-center rounded border border-white/15 bg-[#11161f] focus-within:border-cyan-400/60">
+              <input v-model.number="liquidationPercentDraft" type="number" min="1" max="99" step="1" class="w-16 bg-transparent px-2 py-1.5 text-right text-sm text-slate-100 outline-none" />
+              <span class="pr-2 text-sm text-slate-400">%</span>
+            </div>
+            <button
+              type="button"
+              class="rounded border border-white/15 bg-[#11161f] px-3 py-1.5 text-sm text-slate-100 hover:bg-white/10 disabled:opacity-40"
+              :disabled="liquidationSettingSaving"
+              @click="saveLiquidationSetting"
+            >
+              {{ t('저장', 'Save') }}
+            </button>
+          </div>
+        </div>
+      </div>
+      <p v-if="liquidationSettingError" class="mt-2 text-[13px] text-red-300">{{ liquidationSettingError }}</p>
+      <p v-if="liquidationSettingMsg" class="mt-2 text-[13px] text-emerald-300">{{ liquidationSettingMsg }}</p>
     </div>
 
-    <!-- 차트 갱신주기: 거래소 차트 화면의 그리기/조회 주기(초). 저장하면 테스트·거래소 차트 화면에 30초 안에 적용된다. -->
-    <div v-show="activeTab === 'chartTiming'" class="rounded-2xl border border-white/10 bg-white/5 p-6">
-      <h2 class="text-lg font-semibold">{{ t('차트 갱신주기', 'Chart Refresh Intervals') }}</h2>
-      <p class="mt-1 text-sm text-slate-400">
-        {{ t('거래소 차트 화면이 몇 초마다 다시 그리고/조회할지 정합니다. 저장하면 테스트와 거래소 차트 화면에 30초 안에 적용됩니다. 숫자가 작을수록 빠르지만 서버 호출(데이터 사용량)이 늘어나는 항목도 있습니다.', 'How often the exchange chart screen redraws / fetches. Saved values apply to the test and exchange chart screens within 30 seconds. Smaller is faster but some items increase server calls.') }}
-      </p>
-      <div class="mt-4 space-y-3">
-        <div v-for="row in chartTimingRows" :key="row.key" class="flex flex-wrap items-center gap-4 rounded-xl border border-white/10 bg-white/5 p-4">
-          <div class="w-64">
-            <div class="text-sm font-semibold text-slate-200">{{ row.label }}</div>
-            <div class="mt-0.5 text-xs text-slate-500">{{ row.desc }}</div>
-          </div>
-          <div class="flex items-center gap-2 text-sm text-slate-300">
-            <input
-              v-model.number="chartTimingDraft[row.key]"
-              type="number"
-              :min="chartTimingLimits[row.key][0] / 1000"
-              :max="chartTimingLimits[row.key][1] / 1000"
-              step="0.1"
-              class="w-24 rounded-md bg-white/5 px-3 py-2 text-right text-sm outline-none ring-1 ring-white/10 focus:ring-indigo-500"
-            />
-            <span>{{ t('초', 'sec') }}</span>
-          </div>
-          <span class="text-xs text-slate-500">
-            {{ t('기본', 'Default') }} {{ chartTimingDefaults[row.key] / 1000 }}{{ t('초', 's') }} · {{ t('범위', 'Range') }} {{ chartTimingLimits[row.key][0] / 1000 }}~{{ chartTimingLimits[row.key][1] / 1000 }}{{ t('초', 's') }}
-          </span>
-        </div>
+    <!-- 차트 갱신주기 — 디자인 B · 레지스트리 표형(이름 / 종류 / 데이터): 칸 안에서 바로 고치고 아래 작은 버튼으로 저장 -->
+    <div v-show="activeTab === 'chartTiming'" class="max-w-5xl">
+      <div class="mb-2 flex items-baseline justify-between gap-3">
+        <h2 class="text-base font-semibold text-slate-100">{{ t('차트 갱신주기', 'Chart Refresh Intervals') }}</h2>
+        <span class="text-[11px] text-slate-500">{{ t('디자인 B · 레지스트리 표형', 'Design B · Registry table') }}</span>
       </div>
-      <div class="mt-4 flex items-center gap-3">
-        <button
-          type="button"
-          class="rounded-md bg-indigo-500 px-4 py-2 text-sm font-semibold hover:bg-indigo-400 disabled:opacity-50"
-          :disabled="chartTimingSaving"
-          @click="saveChartTiming"
-        >
+      <p class="mb-3 text-[13px] text-slate-400">
+        {{ t('거래소 차트 화면이 몇 초마다 다시 그리고/조회할지 정합니다. 저장하면 테스트와 거래소 차트 화면에 30초 안에 적용됩니다. "서버 호출" 항목은 숫자가 작을수록 데이터 사용량이 늘어납니다.', 'How often the exchange chart redraws / fetches. Applies to test and exchange within 30 seconds. Smaller "server call" values use more data.') }}
+      </p>
+      <table class="w-full border border-white/10 text-[13px]">
+        <thead class="bg-white/[0.04] text-left text-slate-400">
+          <tr>
+            <th class="border-b border-r border-white/10 px-2 py-1 font-normal">{{ t('이름', 'Name') }}</th>
+            <th class="border-b border-r border-white/10 px-2 py-1 font-normal">{{ t('종류', 'Type') }}</th>
+            <th class="border-b border-r border-white/10 px-2 py-1 font-normal">{{ t('데이터 (초)', 'Data (sec)') }}</th>
+            <th class="border-b border-r border-white/10 px-2 py-1 font-normal">{{ t('기본값', 'Default') }}</th>
+            <th class="border-b border-r border-white/10 px-2 py-1 font-normal">{{ t('범위', 'Range') }}</th>
+            <th class="border-b border-white/10 px-2 py-1 font-normal">{{ t('설명', 'Description') }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="row in chartTimingRows" :key="row.key" class="hover:bg-cyan-500/10 focus-within:bg-cyan-500/15">
+            <td class="whitespace-nowrap border-r border-white/5 px-2 py-1 text-slate-100"><span class="mr-1.5 font-mono text-[10px] text-cyan-400">ab</span>{{ row.label }}</td>
+            <td class="whitespace-nowrap border-r border-white/5 px-2 py-1 font-mono text-[12px] text-slate-400">{{ row.key === 'chartMs' || row.key === 'orderbookMs' ? 'UI_DRAW' : 'API_CALL' }}</td>
+            <td class="border-r border-white/5 px-0 py-0">
+              <input
+                v-model.number="chartTimingDraft[row.key]"
+                type="number"
+                :min="chartTimingLimits[row.key][0] / 1000"
+                :max="chartTimingLimits[row.key][1] / 1000"
+                step="0.1"
+                class="w-full bg-transparent px-2 py-1 font-mono text-slate-100 outline-none focus:bg-black/40"
+              />
+            </td>
+            <td class="whitespace-nowrap border-r border-white/5 px-2 py-1 font-mono text-slate-400">{{ chartTimingDefaults[row.key] / 1000 }}</td>
+            <td class="whitespace-nowrap border-r border-white/5 px-2 py-1 font-mono text-slate-400">{{ chartTimingLimits[row.key][0] / 1000 }} ~ {{ chartTimingLimits[row.key][1] / 1000 }}</td>
+            <td class="px-2 py-1 text-slate-500">{{ row.desc }}</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="mt-2 flex items-center gap-2">
+        <button type="button" class="border border-white/20 bg-white/[0.06] px-3 py-1 text-[13px] text-slate-100 hover:bg-white/10 disabled:opacity-40" :disabled="chartTimingSaving" @click="saveChartTiming">
           {{ chartTimingSaving ? t('저장 중…', 'Saving…') : t('저장', 'Save') }}
         </button>
-        <button type="button" class="rounded-md bg-white/10 px-4 py-2 text-sm text-slate-200 hover:bg-white/15" @click="resetChartTimingDraft">
-          {{ t('기본값으로', 'Reset to defaults') }}
+        <button type="button" class="border border-white/20 bg-white/[0.06] px-3 py-1 text-[13px] text-slate-100 hover:bg-white/10" @click="resetChartTimingDraft">
+          {{ t('기본값으로', 'Defaults') }}
         </button>
-        <span v-if="chartTimingMsg" class="text-sm text-emerald-300">{{ chartTimingMsg }}</span>
-        <span v-if="chartTimingError" class="text-sm text-red-300">{{ chartTimingError }}</span>
+        <span v-if="chartTimingMsg" class="text-[13px] text-emerald-300">{{ chartTimingMsg }}</span>
+        <span v-if="chartTimingError" class="text-[13px] text-red-300">{{ chartTimingError }}</span>
       </div>
     </div>
 
-    <!-- 덤프오류 (임시 · 보여주기용): 거래소 차트 화면에 회원에게 덤프 에러로그를 띄울지와 생성시간 -->
-    <div v-show="activeTab === 'dumpError'" class="rounded-2xl border border-white/10 bg-white/5 p-6">
-      <h2 class="text-lg font-semibold">{{ t('덤프오류', 'Dump Error') }}</h2>
-      <p class="mt-1 text-sm text-slate-400">
-        {{ t('ON이면 그 사이트(거래소 / 테스트) 차트 화면에 로그인한 회원에게 설정한 시간(n~n초 사이 무작위) 뒤 덤프 에러로그가 화면 전체로 뜹니다. OFF면 뜨지 않습니다.', 'When ON, logged-in members on that site\'s (exchange / test) chart screen see a full-screen dump error log after a random n~n seconds. When OFF it does not appear.') }}
-      </p>
-      <div class="mt-4 space-y-3">
-        <div
-          v-for="row in dumpRows"
-          :key="row.site"
-          class="rounded-xl border border-white/10 bg-white/5 p-4"
-        >
-          <div class="flex flex-wrap items-center gap-4">
-            <span class="w-28 text-sm font-semibold text-slate-200">{{ row.label }}</span>
-            <button
-              type="button"
-              class="rounded-full px-5 py-2 text-sm font-semibold"
-              :class="dumpDraft[row.site].enabled ? 'bg-emerald-500 text-white' : 'bg-white/10 text-slate-300'"
-              @click="dumpDraft[row.site].enabled = !dumpDraft[row.site].enabled"
-            >
-              {{ dumpDraft[row.site].enabled ? 'ON' : 'OFF' }}
-            </button>
-            <div class="flex items-center gap-2 text-sm text-slate-300">
-              <span>{{ t('덤프생성시간', 'Dump delay') }}</span>
-              <input
-                v-model.number="dumpDraft[row.site].minSec"
-                type="number"
-                min="0"
-                step="1"
-                class="w-24 rounded-md bg-white/5 px-3 py-2 text-sm outline-none ring-1 ring-white/10 focus:ring-indigo-500"
-              />
-              <span>~</span>
-              <input
-                v-model.number="dumpDraft[row.site].maxSec"
-                type="number"
-                min="0"
-                step="1"
-                class="w-24 rounded-md bg-white/5 px-3 py-2 text-sm outline-none ring-1 ring-white/10 focus:ring-indigo-500"
-              />
-              <span>{{ t('초', 'sec') }}</span>
-            </div>
-            <button
-              type="button"
-              class="rounded-md bg-indigo-500 px-4 py-2 text-sm font-semibold hover:bg-indigo-400 disabled:opacity-50"
-              :disabled="dumpSaving[row.site]"
-              @click="saveDumpSettings(row.site)"
-            >
-              {{ dumpSaving[row.site] ? t('저장 중…', 'Saving…') : t('저장', 'Save') }}
-            </button>
-          </div>
-          <p v-if="dumpError[row.site]" class="mt-2 text-sm text-red-300">{{ dumpError[row.site] }}</p>
-          <p v-if="dumpMsg[row.site]" class="mt-2 text-sm text-emerald-300">{{ dumpMsg[row.site] }}</p>
-        </div>
+    <!-- 덤프오류 — 디자인 C · 한 줄 표형: 상태는 글자(● ON / ○ OFF)를 눌러 바꾸고, 저장은 글자 링크 -->
+    <div v-show="activeTab === 'dumpError'" class="max-w-4xl">
+      <div class="mb-2 flex items-baseline justify-between gap-3">
+        <h2 class="text-base font-semibold text-slate-100">{{ t('덤프오류', 'Dump Error') }}</h2>
+        <span class="text-[11px] text-slate-500">{{ t('디자인 C · 한 줄 표형', 'Design C · Compact rows') }}</span>
       </div>
-
-      <!-- 롱숏 덤프: ON이면 회원이 차트 화면에서 롱/숏 버튼을 누를 때 적어 둔 확률(%)로 덤프 페이지로 넘어간다 -->
-      <p class="mt-6 text-sm text-slate-400">
-        {{ t('롱숏 덤프가 ON이면 그 사이트 차트 화면에서 회원이 롱/숏 버튼을 누를 때 적어 둔 확률(%)로 덤프 에러 페이지로 넘어갑니다(주문은 들어가지 않음).', 'When long/short dump is ON, members pressing Long/Short on that site\'s chart go to the dump error page with the given probability (%) (no order is placed).') }}
-      </p>
-      <div class="mt-3 space-y-3">
-        <div
-          v-for="row in dumpLsRows"
-          :key="'ls-' + row.site"
-          class="rounded-xl border border-white/10 bg-white/5 p-4"
-        >
-          <div class="flex flex-wrap items-center gap-4">
-            <span class="w-28 text-sm font-semibold text-slate-200">{{ row.label }}</span>
-            <button
-              type="button"
-              class="rounded-full px-5 py-2 text-sm font-semibold"
-              :class="dumpLsDraft[row.site].enabled ? 'bg-emerald-500 text-white' : 'bg-white/10 text-slate-300'"
-              @click="dumpLsDraft[row.site].enabled = !dumpLsDraft[row.site].enabled"
-            >
-              {{ dumpLsDraft[row.site].enabled ? 'ON' : 'OFF' }}
-            </button>
-            <div class="flex items-center gap-2 text-sm text-slate-300">
-              <span>{{ t('확률', 'Chance') }}</span>
-              <input
-                v-model.number="dumpLsDraft[row.site].pct"
-                type="number"
-                min="0"
-                max="100"
-                step="1"
-                class="w-24 rounded-md bg-white/5 px-3 py-2 text-sm outline-none ring-1 ring-white/10 focus:ring-indigo-500"
-              />
-              <span>%</span>
-            </div>
-            <button
-              type="button"
-              class="rounded-md bg-indigo-500 px-4 py-2 text-sm font-semibold hover:bg-indigo-400 disabled:opacity-50"
-              :disabled="dumpLsSaving[row.site]"
-              @click="saveDumpLsSettings(row.site)"
-            >
-              {{ dumpLsSaving[row.site] ? t('저장 중…', 'Saving…') : t('저장', 'Save') }}
-            </button>
-          </div>
-          <p v-if="dumpLsError[row.site]" class="mt-2 text-sm text-red-300">{{ dumpLsError[row.site] }}</p>
-          <p v-if="dumpLsMsg[row.site]" class="mt-2 text-sm text-emerald-300">{{ dumpLsMsg[row.site] }}</p>
-        </div>
-      </div>
+      <table class="w-full text-[13px]">
+        <thead class="text-left text-[12px] text-slate-500">
+          <tr class="border-b border-white/10">
+            <th class="py-1.5 pr-3 font-normal">{{ t('항목', 'Item') }}</th>
+            <th class="py-1.5 pr-3 font-normal">{{ t('상태', 'State') }}</th>
+            <th class="py-1.5 pr-3 font-normal">{{ t('값', 'Value') }}</th>
+            <th class="py-1.5 font-normal"></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td colspan="4" class="pt-3 pb-1 text-[12px] text-slate-500">{{ t('시간 덤프 — 차트 화면에서 설정한 n~n초(무작위) 뒤 덤프 에러로그가 화면 전체로 뜸', 'Timed dump — full-screen dump log after a random n~n seconds on the chart') }}</td>
+          </tr>
+          <tr v-for="row in dumpRows" :key="row.site" class="border-b border-white/5">
+            <td class="py-2 pr-3 text-slate-100">{{ row.label }}</td>
+            <td class="py-2 pr-3">
+              <button type="button" class="font-mono" :class="dumpDraft[row.site].enabled ? 'text-emerald-300' : 'text-slate-500'" @click="dumpDraft[row.site].enabled = !dumpDraft[row.site].enabled">
+                {{ dumpDraft[row.site].enabled ? '● ON' : '○ OFF' }}
+              </button>
+            </td>
+            <td class="py-2 pr-3 text-slate-300">
+              <input v-model.number="dumpDraft[row.site].minSec" type="number" min="0" step="1" class="w-16 border-b border-white/20 bg-transparent px-1 text-right font-mono outline-none focus:border-cyan-400" />
+              ~
+              <input v-model.number="dumpDraft[row.site].maxSec" type="number" min="0" step="1" class="w-16 border-b border-white/20 bg-transparent px-1 text-right font-mono outline-none focus:border-cyan-400" />
+              {{ t('초', 'sec') }}
+            </td>
+            <td class="py-2 text-right">
+              <span v-if="dumpError[row.site]" class="mr-2 text-red-300">{{ dumpError[row.site] }}</span>
+              <span v-if="dumpMsg[row.site]" class="mr-2 text-emerald-300">{{ dumpMsg[row.site] }}</span>
+              <button type="button" class="text-cyan-300 hover:underline disabled:opacity-40" :disabled="dumpSaving[row.site]" @click="saveDumpSettings(row.site)">
+                {{ dumpSaving[row.site] ? t('저장 중…', 'Saving…') : t('저장', 'Save') }}
+              </button>
+            </td>
+          </tr>
+          <tr>
+            <td colspan="4" class="pt-4 pb-1 text-[12px] text-slate-500">{{ t('롱숏 덤프 — 회원이 롱/숏을 누를 때 적어 둔 확률(%)로 덤프 에러 페이지로 이동(주문은 들어가지 않음)', 'Long/short dump — on Long/Short click, go to the dump page with the given chance (no order)') }}</td>
+          </tr>
+          <tr v-for="row in dumpLsRows" :key="'ls-' + row.site" class="border-b border-white/5">
+            <td class="py-2 pr-3 text-slate-100">{{ row.label }}</td>
+            <td class="py-2 pr-3">
+              <button type="button" class="font-mono" :class="dumpLsDraft[row.site].enabled ? 'text-emerald-300' : 'text-slate-500'" @click="dumpLsDraft[row.site].enabled = !dumpLsDraft[row.site].enabled">
+                {{ dumpLsDraft[row.site].enabled ? '● ON' : '○ OFF' }}
+              </button>
+            </td>
+            <td class="py-2 pr-3 text-slate-300">
+              <input v-model.number="dumpLsDraft[row.site].pct" type="number" min="0" max="100" step="1" class="w-16 border-b border-white/20 bg-transparent px-1 text-right font-mono outline-none focus:border-cyan-400" />
+              %
+            </td>
+            <td class="py-2 text-right">
+              <span v-if="dumpLsError[row.site]" class="mr-2 text-red-300">{{ dumpLsError[row.site] }}</span>
+              <span v-if="dumpLsMsg[row.site]" class="mr-2 text-emerald-300">{{ dumpLsMsg[row.site] }}</span>
+              <button type="button" class="text-cyan-300 hover:underline disabled:opacity-40" :disabled="dumpLsSaving[row.site]" @click="saveDumpLsSettings(row.site)">
+                {{ dumpLsSaving[row.site] ? t('저장 중…', 'Saving…') : t('저장', 'Save') }}
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </div>
 
-    <!-- 정산/기타 설정 -->
-    <div v-show="activeTab === 'misc'" class="rounded-2xl border border-white/10 bg-white/5 p-6">
-      <h2 class="text-lg font-semibold">{{ t('정산/기타 설정', 'Settlement/Other Settings') }}</h2>
-      <p class="mt-1 text-sm text-slate-400">{{ t('고객센터 텔레그램 링크, 원/USDT 환율, 정산 비율을 설정합니다.', 'Set the support Telegram link, KRW/USDT exchange rate, and settlement rates.') }}</p>
-      <div class="mt-4 grid gap-4 md:grid-cols-2">
+    <!-- 정산/기타 설정 — 디자인 D · 설정 양식형: 왼쪽 이름·설명 / 오른쪽 값, 얇은 구분선, 묶음 제목 -->
+    <div v-show="activeTab === 'misc'" class="max-w-4xl">
+      <div class="mb-2 flex items-baseline justify-between gap-3">
+        <h2 class="text-base font-semibold text-slate-100">{{ t('정산/기타 설정', 'Settlement/Other Settings') }}</h2>
+        <span class="text-[11px] text-slate-500">{{ t('디자인 D · 설정 양식형', 'Design D · Settings form') }}</span>
+      </div>
+
+      <h3 class="mt-4 border-b border-white/10 pb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-500">{{ t('일반', 'General') }}</h3>
+      <div class="grid grid-cols-1 gap-2 border-b border-white/5 py-3 md:grid-cols-[240px_minmax(0,1fr)] md:gap-6">
         <div>
-          <label class="text-sm text-slate-300">{{ t('고객센터 텔레그램 링크', 'Support Telegram Link') }}</label>
-          <input
-            v-model.trim="miscDraft.telegramUrl"
-            placeholder="https://t.me/..."
-            class="mt-1 w-full rounded-md bg-white/5 px-3 py-2 text-sm outline-none ring-1 ring-white/10 focus:ring-indigo-500"
-          />
+          <div class="text-sm text-slate-200">{{ t('고객센터 텔레그램 링크', 'Support Telegram Link') }}</div>
+          <div class="text-xs text-slate-500">{{ t('회원 화면 고객센터 버튼이 여는 주소', 'Opened by the support button') }}</div>
+        </div>
+        <input v-model.trim="miscDraft.telegramUrl" placeholder="https://t.me/..." class="w-full max-w-md rounded-sm border border-white/15 bg-transparent px-2 py-1.5 text-sm outline-none focus:border-cyan-400" />
+      </div>
+      <div class="grid grid-cols-1 gap-2 border-b border-white/5 py-3 md:grid-cols-[240px_minmax(0,1fr)] md:gap-6">
+        <div>
+          <div class="text-sm text-slate-200">{{ t('원/USDT 환율', 'KRW/USDT Rate') }}</div>
+          <div class="text-xs text-slate-500">{{ t('0 = 매일 09시 자동 환율 사용', '0 = use the automatic 9 AM daily rate') }}</div>
         </div>
         <div>
-          <label class="text-sm text-slate-300">{{ t('원/USDT 환율 (0 = 매일 09시 자동 환율 사용)', 'KRW/USDT Rate (0 = use automatic 9 AM daily rate)') }}</label>
-          <input
-            v-model.number="miscDraft.krwPerUsdt"
-            type="number"
-            min="0"
-            step="0.01"
-            class="mt-1 w-full rounded-md bg-white/5 px-3 py-2 text-sm outline-none ring-1 ring-white/10 focus:ring-indigo-500"
-          />
+          <input v-model.number="miscDraft.krwPerUsdt" type="number" min="0" step="0.01" class="w-40 rounded-sm border border-white/15 bg-transparent px-2 py-1.5 text-right text-sm outline-none focus:border-cyan-400" />
           <p class="mt-1 text-xs text-slate-500">
-            {{ t('현재 자동 환율(매일 오전 9시 빗썸 기준 고정):', 'Current automatic rate (fixed daily at 9 AM based on Bithumb):') }} <span class="font-data text-slate-300">{{ dailyKrwRate ? t(`${fmt0(dailyKrwRate)}원`, `₩${fmt0(dailyKrwRate)}`) : t('아직 없음', 'Not available yet') }}</span>
+            {{ t('현재 자동 환율(매일 오전 9시 빗썸 기준 고정):', 'Current automatic rate (fixed daily at 9 AM, Bithumb):') }} <span class="font-data text-slate-300">{{ dailyKrwRate ? t(`${fmt0(dailyKrwRate)}원`, `₩${fmt0(dailyKrwRate)}`) : t('아직 없음', 'Not available yet') }}</span>
             <span v-if="dailyKrwRateDay"> {{ t(`(${dailyKrwRateDay} 갱신)`, `(updated ${dailyKrwRateDay})`) }}</span>
           </p>
         </div>
+      </div>
+
+      <h3 class="mt-6 border-b border-white/10 pb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-500">{{ t('정산', 'Settlement') }}</h3>
+      <div class="grid grid-cols-1 gap-2 border-b border-white/5 py-3 md:grid-cols-[240px_minmax(0,1fr)] md:gap-6">
         <div>
-          <label class="text-sm text-slate-300">{{ t('손실정산 기본 비율 (%)', 'Default Loss Settlement Rate (%)') }}</label>
-          <input
-            v-model.number="miscDraft.lossSettlementPercent"
-            type="number"
-            min="0"
-            max="100"
-            step="0.1"
-            class="mt-1 w-full rounded-md bg-white/5 px-3 py-2 text-sm outline-none ring-1 ring-white/10 focus:ring-indigo-500"
-          />
-          <p class="mt-1 text-xs text-slate-500">{{ t('부관리자별 개별 비율을 지정하지 않았을 때 사용되는 기본값입니다.', 'Default used when no individual rate is set for a sub-admin.') }}</p>
+          <div class="text-sm text-slate-200">{{ t('손실정산 기본 비율', 'Default Loss Settlement Rate') }}</div>
+          <div class="text-xs text-slate-500">{{ t('부관리자별 비율이 없을 때 사용', 'Used when no per-admin rate is set') }}</div>
         </div>
+        <div class="flex items-center gap-1.5">
+          <input v-model.number="miscDraft.lossSettlementPercent" type="number" min="0" max="100" step="0.1" class="w-24 rounded-sm border border-white/15 bg-transparent px-2 py-1.5 text-right text-sm outline-none focus:border-cyan-400" />
+          <span class="text-sm text-slate-400">%</span>
+        </div>
+      </div>
+      <div class="grid grid-cols-1 gap-2 border-b border-white/5 py-3 md:grid-cols-[240px_minmax(0,1fr)] md:gap-6">
         <div>
-          <label class="text-sm text-slate-300">{{ t('레퍼럴정산 기본 비율 (%)', 'Default Referral Settlement Rate (%)') }}</label>
-          <input
-            v-model.number="miscDraft.referralSettlementPercent"
-            type="number"
-            min="0"
-            max="100"
-            step="0.1"
-            class="mt-1 w-full rounded-md bg-white/5 px-3 py-2 text-sm outline-none ring-1 ring-white/10 focus:ring-indigo-500"
-          />
-          <p class="mt-1 text-xs text-slate-500">{{ t('부관리자별 개별 비율을 지정하지 않았을 때 사용되는 기본값입니다.', 'Default used when no individual rate is set for a sub-admin.') }}</p>
+          <div class="text-sm text-slate-200">{{ t('레퍼럴정산 기본 비율', 'Default Referral Settlement Rate') }}</div>
+          <div class="text-xs text-slate-500">{{ t('부관리자별 비율이 없을 때 사용', 'Used when no per-admin rate is set') }}</div>
+        </div>
+        <div class="flex items-center gap-1.5">
+          <input v-model.number="miscDraft.referralSettlementPercent" type="number" min="0" max="100" step="0.1" class="w-24 rounded-sm border border-white/15 bg-transparent px-2 py-1.5 text-right text-sm outline-none focus:border-cyan-400" />
+          <span class="text-sm text-slate-400">%</span>
         </div>
       </div>
 
-      <div class="mt-6 border-t border-white/10 pt-5">
-        <h3 class="text-sm font-semibold text-slate-200">{{ t('관리자 메뉴 순서', 'Admin Menu Order') }}</h3>
-        <p class="mt-1 text-xs text-slate-400">{{ t('상단 관리자 메뉴가 보이는 순서를 바꿉니다. 화살표로 위/아래로 옮기세요.', 'Change the order the top admin menu items appear in. Use the arrows to move items up/down.') }}</p>
-        <div class="mt-3 space-y-1.5">
-          <div
-            v-for="(key, idx) in miscDraft.menuOrder"
-            :key="key"
-            class="flex items-center justify-between rounded-lg border border-white/10 bg-white/5 px-3 py-2"
-          >
-            <span class="text-sm text-slate-200">{{ menuMeta[key] ? t(menuMeta[key].labelKo, menuMeta[key].labelEn) : key }}</span>
-            <div class="flex items-center gap-1">
-              <button
-                type="button"
-                class="rounded bg-white/10 px-2 py-1 text-xs hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-30"
-                :disabled="idx === 0"
-                @click="moveMenuOrder(idx, -1)"
-              >
-                ▲
-              </button>
-              <button
-                type="button"
-                class="rounded bg-white/10 px-2 py-1 text-xs hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-30"
-                :disabled="idx === miscDraft.menuOrder.length - 1"
-                @click="moveMenuOrder(idx, 1)"
-              >
-                ▼
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
+      <h3 class="mt-6 border-b border-white/10 pb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-500">{{ t('관리자 메뉴 순서', 'Admin Menu Order') }}</h3>
+      <ol class="py-2 text-sm">
+        <li v-for="(key, idx) in miscDraft.menuOrder" :key="key" class="group flex items-center gap-3 py-1">
+          <span class="w-6 text-right font-mono text-xs text-slate-500">{{ idx + 1 }}.</span>
+          <span class="text-slate-200">{{ menuMeta[key] ? t(menuMeta[key].labelKo, menuMeta[key].labelEn) : key }}</span>
+          <span class="ml-2 text-xs text-slate-500">
+            <button type="button" class="hover:text-cyan-300 disabled:opacity-30" :disabled="idx === 0" @click="moveMenuOrder(idx, -1)">{{ t('위로', 'up') }}</button>
+            ·
+            <button type="button" class="hover:text-cyan-300 disabled:opacity-30" :disabled="idx === miscDraft.menuOrder.length - 1" @click="moveMenuOrder(idx, 1)">{{ t('아래로', 'down') }}</button>
+          </span>
+        </li>
+      </ol>
 
-      <div class="mt-4 flex items-center gap-3">
-        <button
-          class="rounded-md bg-indigo-500 px-4 py-2 text-sm hover:bg-indigo-400 disabled:cursor-not-allowed disabled:opacity-50"
-          :disabled="miscSaving"
-          @click="saveMiscSettings"
-        >
+      <div class="mt-3 flex items-center gap-3 border-t border-white/10 pt-3">
+        <button type="button" class="rounded-sm bg-cyan-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-cyan-500 disabled:opacity-40" :disabled="miscSaving" @click="saveMiscSettings">
           {{ t('저장', 'Save') }}
         </button>
-        <p v-if="miscError" class="text-sm text-red-300">{{ miscError }}</p>
-        <p v-if="miscMsg" class="text-sm text-emerald-300">{{ miscMsg }}</p>
+        <p v-if="miscError" class="text-[13px] text-red-300">{{ miscError }}</p>
+        <p v-if="miscMsg" class="text-[13px] text-emerald-300">{{ miscMsg }}</p>
       </div>
     </div>
 
-    <!-- 메뉴구성 -->
-    <div v-show="activeTab === 'nav'" class="rounded-2xl border border-white/10 bg-white/5 p-6">
-      <h2 class="text-lg font-semibold">{{ t('메뉴구성', 'Menu Layout') }}</h2>
-      <p class="mt-1 text-sm text-slate-400">
-        {{ t('비회원을 포함해 누구나 보는 최상단 메인 메뉴의 순서를 바꾸거나, 특정 메뉴를 화면에서 숨길 수 있습니다.', 'Change the order of the top main menu that everyone sees, including non-members, or hide specific menu items from view.') }}
+    <!-- 메뉴구성 — 디자인 E · 체크 목록형: 체크박스 + 이름, 순서는 오른쪽 작은 ↑ ↓ 글자 -->
+    <div v-show="activeTab === 'nav'" class="max-w-xl">
+      <div class="mb-2 flex items-baseline justify-between gap-3">
+        <h2 class="text-base font-semibold text-slate-100">{{ t('메뉴구성', 'Menu Layout') }}</h2>
+        <span class="text-[11px] text-slate-500">{{ t('디자인 E · 체크 목록형', 'Design E · Checklist') }}</span>
+      </div>
+      <p class="mb-3 text-[13px] text-slate-400">
+        {{ t('누구나 보는 최상단 메인 메뉴입니다. 체크를 풀면 화면에서 숨겨지고, ↑ ↓로 순서를 바꿉니다.', 'The top main menu everyone sees. Uncheck to hide; use ↑ ↓ to reorder.') }}
       </p>
-
-      <div class="mt-4 space-y-2">
-        <div
+      <div class="border-y border-white/10">
+        <label
           v-for="(key, idx) in mainNavDraft.order"
           :key="key"
-          class="flex items-center justify-between rounded-lg border border-white/10 bg-white/5 px-4 py-3"
+          class="group flex cursor-pointer items-center gap-3 border-b border-white/5 px-1 py-2 text-sm last:border-b-0 hover:bg-white/[0.03]"
         >
-          <div class="flex items-center gap-3">
-            <div class="flex flex-col">
-              <button
-                type="button"
-                class="rounded bg-white/10 px-1.5 text-[12px] leading-4 hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-30"
-                :disabled="idx === 0"
-                @click="moveMainNavOrder(idx, -1)"
-              >
-                ▲
-              </button>
-              <button
-                type="button"
-                class="rounded bg-white/10 px-1.5 text-[12px] leading-4 hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-30"
-                :disabled="idx === mainNavDraft.order.length - 1"
-                @click="moveMainNavOrder(idx, 1)"
-              >
-                ▼
-              </button>
-            </div>
-            <span class="text-sm font-semibold text-slate-100" :class="{ 'text-slate-500 line-through': mainNavDraft.hidden.includes(key) }">
-              {{ t(MAIN_NAV_LABELS[key].ko, MAIN_NAV_LABELS[key].en) }}
-            </span>
-          </div>
-          <label class="flex items-center gap-2 text-xs text-slate-300">
-            <input type="checkbox" :checked="!mainNavDraft.hidden.includes(key)" @change="toggleMainNavHidden(key)" />
-            {{ t('화면에 표시', 'Show on screen') }}
-          </label>
-        </div>
+          <input type="checkbox" class="h-4 w-4 accent-cyan-500" :checked="!mainNavDraft.hidden.includes(key)" @change="toggleMainNavHidden(key)" />
+          <span :class="mainNavDraft.hidden.includes(key) ? 'text-slate-500 line-through' : 'text-slate-100'">{{ t(MAIN_NAV_LABELS[key].ko, MAIN_NAV_LABELS[key].en) }}</span>
+          <span class="ml-auto flex gap-1 font-mono text-xs text-slate-500">
+            <button type="button" class="rounded px-1.5 hover:bg-white/10 hover:text-cyan-300 disabled:opacity-20" :disabled="idx === 0" @click.prevent="moveMainNavOrder(idx, -1)">↑</button>
+            <button type="button" class="rounded px-1.5 hover:bg-white/10 hover:text-cyan-300 disabled:opacity-20" :disabled="idx === mainNavDraft.order.length - 1" @click.prevent="moveMainNavOrder(idx, 1)">↓</button>
+          </span>
+        </label>
       </div>
-
-      <div class="mt-4 flex items-center gap-3">
-        <button
-          class="rounded-md bg-indigo-500 px-4 py-2 text-sm hover:bg-indigo-400 disabled:cursor-not-allowed disabled:opacity-50"
-          :disabled="mainNavSaving"
-          @click="saveMainNavSettings"
-        >
+      <div class="mt-3 flex items-center gap-3">
+        <button type="button" class="rounded border border-white/15 px-3 py-1 text-sm text-slate-100 hover:bg-white/10 disabled:opacity-40" :disabled="mainNavSaving" @click="saveMainNavSettings">
           {{ t('저장', 'Save') }}
         </button>
-        <p v-if="mainNavError" class="text-sm text-red-300">{{ mainNavError }}</p>
-        <p v-if="mainNavMsg" class="text-sm text-emerald-300">{{ mainNavMsg }}</p>
+        <p v-if="mainNavError" class="text-[13px] text-red-300">{{ mainNavError }}</p>
+        <p v-if="mainNavMsg" class="text-[13px] text-emerald-300">{{ mainNavMsg }}</p>
       </div>
     </div>
 
@@ -1299,225 +1227,135 @@
       </div>
     </div>
 
-    <!-- 역할 관리 -->
-    <div v-show="activeTab === 'roles'" class="rounded-2xl border border-white/10 bg-white/5 p-6">
-      <div class="flex items-end justify-between gap-3">
-        <div>
-          <h2 class="text-lg font-semibold">{{ t('역할 관리', 'Role Management') }}</h2>
-          <p class="mt-1 text-sm text-slate-400">
-            {{ t('관리자 역할을 추가/삭제하고, 역할마다 관리자 메뉴 권한을 설정합니다. 화살표는 화면에 보이는 순서만 바꾸고, 실제 권한 서열은 "등급" 숫자로 정해집니다(숫자가 작을수록 상위). 등급이 같은 역할끼리는 서로 역할을 부여할 수 없고, 자기보다 등급 숫자가 더 큰(아래) 역할만 코드부여할 수 있습니다. 여러 역할에 같은 등급을 입력하면 서로 동급으로 묶입니다. 총관리자는 항상 최상위입니다.', 'Add/remove admin roles and set admin menu permissions for each role. The arrows only change the on-screen display order — actual authority ranking is determined by the "tier" number (lower numbers rank higher). Roles with the same tier cannot grant roles to each other; you can only assign codes to roles with a higher (lower-ranked) tier number than your own. Entering the same tier for multiple roles groups them as equals. The super admin is always the highest rank.') }}
-          </p>
-        </div>
-        <button class="rounded-md bg-white/10 px-3 py-2 text-sm hover:bg-white/15" @click="loadRoles">
-          {{ t('새로고침', 'Refresh') }}
-        </button>
+    <!-- 역할 관리 — 디자인 F · 표 격자형(스프레드시트): 칸마다 선, 등급은 칸 안에서 바로 고침, 작업은 글자 링크 -->
+    <div v-show="activeTab === 'roles'" class="max-w-5xl">
+      <div class="mb-2 flex items-baseline justify-between gap-3">
+        <h2 class="text-base font-semibold text-slate-100">{{ t('역할 관리', 'Role Management') }}</h2>
+        <span class="text-[11px] text-slate-500">{{ t('디자인 F · 표 격자형', 'Design F · Grid') }}</span>
       </div>
-
-      <div class="mt-4 flex flex-wrap items-end gap-2 rounded-xl border border-white/10 bg-white/5 p-4">
-        <div>
-          <label class="text-xs text-slate-400">{{ t('역할 ID (영문 소문자, 예: team_lead)', 'Role ID (lowercase English, e.g. team_lead)') }}</label>
-          <input
-            v-model.trim="newRoleId"
-            placeholder="team_lead"
-            class="mt-1 w-40 rounded-md bg-white/5 px-3 py-2 text-sm outline-none ring-1 ring-white/10 focus:ring-indigo-500"
-          />
-        </div>
-        <div>
-          <label class="text-xs text-slate-400">{{ t('역할 이름', 'Role Name') }}</label>
-          <input
-            v-model.trim="newRoleLabel"
-            :placeholder="t('팀장', 'Team Lead')"
-            :key="`new-role-label-${locale}`"
-            class="mt-1 w-32 rounded-md bg-white/5 px-3 py-2 text-sm outline-none ring-1 ring-white/10 focus:ring-indigo-500"
-          />
-        </div>
-        <button
-          class="rounded-md bg-indigo-500 px-4 py-2 text-sm hover:bg-indigo-400 disabled:cursor-not-allowed disabled:opacity-50"
-          :disabled="creatingRole"
-          @click="createRoleClick"
-        >
-          {{ t('역할 추가', 'Add Role') }}
-        </button>
-        <p v-if="newRoleError" class="w-full text-sm text-red-300">{{ newRoleError }}</p>
+      <p class="mb-3 text-[13px] leading-5 text-slate-400">
+        {{ t('화살표는 화면 순서만 바꾸고, 실제 권한 서열은 "등급" 숫자로 정해집니다(작을수록 상위). 같은 등급끼리는 서로 역할을 줄 수 없고, 자기보다 등급 숫자가 큰(아래) 역할만 코드부여할 수 있습니다. 총관리자는 항상 최상위입니다.', 'Arrows only change display order; authority is the "tier" number (lower = higher). Same-tier roles cannot grant each other; you can only assign roles with a larger tier number. Super admin is always top.') }}
+      </p>
+      <div class="mb-3 flex flex-wrap items-center gap-2 text-[13px]">
+        <span class="text-slate-400">{{ t('새 역할', 'New role') }}:</span>
+        <input v-model.trim="newRoleId" placeholder="team_lead" class="w-36 border border-white/15 bg-transparent px-2 py-1 font-mono outline-none focus:border-cyan-400" />
+        <input v-model.trim="newRoleLabel" :placeholder="t('역할 이름', 'Role name')" :key="`new-role-label-${locale}`" class="w-32 border border-white/15 bg-transparent px-2 py-1 outline-none focus:border-cyan-400" />
+        <button type="button" class="border border-white/20 bg-white/[0.06] px-3 py-1 hover:bg-white/10 disabled:opacity-40" :disabled="creatingRole" @click="createRoleClick">{{ t('추가', 'Add') }}</button>
+        <button type="button" class="ml-auto text-slate-400 hover:text-cyan-300" @click="loadRoles">↻ {{ t('새로고침', 'Refresh') }}</button>
+        <p v-if="newRoleError" class="w-full text-red-300">{{ newRoleError }}</p>
       </div>
-
-      <div class="mt-4 rounded-xl border border-white/10 bg-white/5 p-4">
-        <div v-if="rolesLoading" class="text-sm text-slate-400">{{ t('불러오는 중…', 'Loading…') }}</div>
-        <div v-else-if="roles.length === 0" class="text-sm text-slate-400">{{ t('등록된 역할이 없습니다.', 'No roles registered.') }}</div>
-        <div v-else class="space-y-2">
-          <div v-for="(r, idx) in roles" :key="r.id" class="flex items-center justify-between rounded-lg border border-white/10 bg-white/5 px-4 py-3">
-            <div class="flex items-center gap-3">
-              <span class="w-6 text-center font-data text-xs text-slate-500">{{ idx + 1 }}</span>
-              <div class="flex flex-col">
-                <button
-                  type="button"
-                  class="rounded bg-white/10 px-1.5 text-[12px] leading-4 hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-30"
-                  :disabled="idx === 0 || reorderingRoles"
-                  @click="moveRoleRank(idx, -1)"
-                >
-                  ▲
-                </button>
-                <button
-                  type="button"
-                  class="rounded bg-white/10 px-1.5 text-[12px] leading-4 hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-30"
-                  :disabled="idx === roles.length - 1 || reorderingRoles"
-                  @click="moveRoleRank(idx, 1)"
-                >
-                  ▼
-                </button>
-              </div>
-              <div>
-                <span class="text-sm font-semibold text-slate-100">{{ r.label }}</span>
-                <span class="ml-2 font-data text-xs text-slate-500">{{ r.id }}</span>
-              </div>
-            </div>
-            <div class="flex items-center gap-2">
-              <div class="flex items-center gap-1.5 rounded-md border border-white/10 bg-white/5 px-2 py-1.5">
-                <span class="text-xs text-slate-400">{{ t('등급', 'Tier') }}</span>
-                <input
-                  v-model="tierDraft[r.id]"
-                  type="number"
-                  step="1"
-                  :disabled="savingTierId === r.id"
-                  class="w-14 bg-transparent text-right text-sm text-slate-100 outline-none disabled:opacity-50"
-                  @blur="saveRoleTier(r)"
-                  @keyup.enter="saveRoleTier(r)"
-                />
-              </div>
-              <button class="rounded-md bg-white/10 px-3 py-1.5 text-xs hover:bg-white/15" @click="openRoleModal(r)">
-                {{ t('메뉴 권한 설정', 'Menu Permissions') }}
-              </button>
-              <button
-                class="rounded-md bg-rose-500/15 px-3 py-1.5 text-xs text-rose-200 ring-1 ring-rose-400/20 hover:bg-rose-500/25 disabled:cursor-not-allowed disabled:opacity-40"
-                :disabled="deletingRoleId === r.id"
-                @click="deleteRoleClick(r)"
-              >
-                {{ t('삭제', 'Delete') }}
-              </button>
-            </div>
-          </div>
-        </div>
-        <p v-if="rolesError" class="mt-3 text-sm text-red-300">{{ rolesError }}</p>
-      </div>
+      <div v-if="rolesLoading" class="text-[13px] text-slate-400">{{ t('불러오는 중…', 'Loading…') }}</div>
+      <div v-else-if="roles.length === 0" class="text-[13px] text-slate-400">{{ t('등록된 역할이 없습니다.', 'No roles registered.') }}</div>
+      <table v-else class="w-full border-collapse text-[13px]">
+        <thead class="bg-white/[0.04] text-left text-slate-400">
+          <tr>
+            <th class="w-10 border border-white/10 px-2 py-1 text-center font-normal">#</th>
+            <th class="w-16 border border-white/10 px-2 py-1 text-center font-normal">{{ t('순서', 'Order') }}</th>
+            <th class="border border-white/10 px-2 py-1 font-normal">{{ t('역할 이름', 'Role') }}</th>
+            <th class="border border-white/10 px-2 py-1 font-normal">ID</th>
+            <th class="w-20 border border-white/10 px-2 py-1 font-normal">{{ t('등급', 'Tier') }}</th>
+            <th class="border border-white/10 px-2 py-1 font-normal">{{ t('작업', 'Actions') }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="(r, idx) in roles" :key="r.id" class="hover:bg-white/[0.03]">
+            <td class="border border-white/10 px-2 py-1 text-center font-mono text-slate-500">{{ idx + 1 }}</td>
+            <td class="border border-white/10 px-1 py-1 text-center font-mono text-slate-400">
+              <button type="button" class="px-1 hover:text-cyan-300 disabled:opacity-20" :disabled="idx === 0 || reorderingRoles" @click="moveRoleRank(idx, -1)">↑</button>
+              <button type="button" class="px-1 hover:text-cyan-300 disabled:opacity-20" :disabled="idx === roles.length - 1 || reorderingRoles" @click="moveRoleRank(idx, 1)">↓</button>
+            </td>
+            <td class="border border-white/10 px-2 py-1 text-slate-100">{{ r.label }}</td>
+            <td class="border border-white/10 px-2 py-1 font-mono text-slate-400">{{ r.id }}</td>
+            <td class="border border-white/10 p-0">
+              <input
+                v-model="tierDraft[r.id]"
+                type="number"
+                step="1"
+                :disabled="savingTierId === r.id"
+                class="w-full bg-transparent px-2 py-1 text-right font-mono text-slate-100 outline-none focus:bg-black/40 disabled:opacity-50"
+                @blur="saveRoleTier(r)"
+                @keyup.enter="saveRoleTier(r)"
+              />
+            </td>
+            <td class="border border-white/10 px-2 py-1">
+              <button type="button" class="text-cyan-300 hover:underline" @click="openRoleModal(r)">{{ t('메뉴 권한', 'Permissions') }}</button>
+              <span class="mx-1.5 text-slate-600">|</span>
+              <button type="button" class="text-rose-300 hover:underline disabled:opacity-40" :disabled="deletingRoleId === r.id" @click="deleteRoleClick(r)">{{ t('삭제', 'Delete') }}</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <p v-if="rolesError" class="mt-2 text-[13px] text-red-300">{{ rolesError }}</p>
     </div>
 
-    <!-- 리모콘 -->
-    <div v-show="activeTab === 'profitEvents'" class="rounded-2xl border border-white/10 bg-white/5 p-6">
-      <div class="flex items-center justify-between">
-        <div>
-          <h2 class="text-lg font-semibold">{{ t('리모콘', 'Remote') }}</h2>
-          <p class="mt-1 text-sm text-slate-400">
-            {{ t('삭제하면 모든 유저의 차트에서도 해당 봉의 고가/저가(꼬리)가 사라집니다(잠시 후 자동 반영).', 'Deleting also removes that candle\'s high/low wick from every user\'s chart (applies automatically shortly after).') }}
-          </p>
-        </div>
-        <button class="rounded-md bg-white/10 px-3 py-2 text-sm hover:bg-white/15" @click="loadProfitEvents">
-          {{ t('새로고침', 'Refresh') }}
-        </button>
+    <!-- 리모콘 — 디자인 G · 로그형: 시간순 기록을 고정폭 글자로, 삭제는 글자 링크 -->
+    <div v-show="activeTab === 'profitEvents'" class="max-w-5xl">
+      <div class="mb-2 flex items-baseline justify-between gap-3">
+        <h2 class="text-base font-semibold text-slate-100">{{ t('리모콘', 'Remote') }}</h2>
+        <span class="text-[11px] text-slate-500">{{ t('디자인 G · 로그형', 'Design G · Log') }}</span>
       </div>
-
-      <div class="mt-4 rounded-xl border border-white/10 bg-white/5 p-4">
-        <div v-if="profitEventsLoading" class="text-sm text-slate-400">{{ t('불러오는 중…', 'Loading…') }}</div>
-        <div v-else-if="profitEvents.length === 0" class="text-sm text-slate-400">{{ t('리모콘 이력이 없습니다.', 'No remote history.') }}</div>
-        <div v-else class="overflow-auto">
-          <table class="w-full text-sm">
-            <thead class="text-left text-slate-400">
-              <tr>
-                <th class="py-2">{{ t('시각', 'Time') }}</th>
-                <th class="py-2">{{ t('심볼', 'Symbol') }}</th>
-                <th class="py-2">{{ t('방향', 'Direction') }}</th>
-                <th class="py-2">{{ t('퍼센트(레버리지100x 기준)', 'Percent (based on 100x leverage)') }}</th>
-                <th class="py-2">{{ t('기준가 → 도달가', 'Base Price → Reached Price') }}</th>
-                <th class="py-2">{{ t('유지시간', 'Hold Time') }}</th>
-                <th class="py-2"></th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="p in profitEvents" :key="p.id" class="border-t border-white/10">
-                <td class="py-2 font-data text-xs">{{ formatKillTime(p.createdAt) }}</td>
-                <td class="py-2 font-data">{{ p.symbol }}</td>
-                <td class="py-2" :class="p.direction === 'up' ? 'text-emerald-300' : 'text-rose-300'">
-                  {{ p.direction === 'up' ? t('수익', 'Profit') : t('손실', 'Loss') }}
-                </td>
-                <td class="py-2 font-data">{{ p.percent }}%</td>
-                <td class="py-2 font-data">{{ p.basePrice }} → {{ p.shockedPrice }}</td>
-                <td class="py-2 font-data">{{ t(`${(p.holdMs / 1000).toFixed(1)}초`, `${(p.holdMs / 1000).toFixed(1)}s`) }}</td>
-                <td class="py-2">
-                  <button
-                    class="rounded-md bg-rose-500/15 px-3 py-1 text-xs text-rose-200 ring-1 ring-rose-500/20 hover:bg-rose-500/25 disabled:cursor-not-allowed disabled:opacity-50"
-                    :disabled="profitEventDeleting === p.id"
-                    @click="deleteProfitEvent(p.id)"
-                  >
-                    {{ t('삭제', 'Delete') }}
-                  </button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <p v-if="profitEventsError" class="mt-3 text-sm text-red-300">{{ profitEventsError }}</p>
+      <div class="mb-2 flex items-center justify-between gap-3 text-[13px]">
+        <p class="text-slate-400">{{ t('삭제하면 모든 유저의 차트에서도 해당 봉의 고가/저가(꼬리)가 사라집니다(잠시 후 자동 반영).', 'Deleting also removes that candle\'s wick from every user\'s chart (applies shortly).') }}</p>
+        <button type="button" class="shrink-0 text-slate-400 hover:text-cyan-300" @click="loadProfitEvents">↻ {{ t('새로고침', 'Refresh') }}</button>
       </div>
+      <div class="rounded border border-white/10 bg-black/40 font-mono text-[12px]">
+        <div class="grid grid-cols-[150px_120px_60px_70px_minmax(0,1fr)_70px_50px] gap-x-3 border-b border-white/10 px-3 py-1.5 text-slate-500">
+          <span>{{ t('시각', 'TIME') }}</span>
+          <span>{{ t('심볼', 'SYMBOL') }}</span>
+          <span>{{ t('방향', 'DIR') }}</span>
+          <span>{{ t('퍼센트', 'PCT') }}</span>
+          <span>{{ t('기준가 → 도달가', 'BASE → REACHED') }}</span>
+          <span>{{ t('유지', 'HOLD') }}</span>
+          <span></span>
+        </div>
+        <div v-if="profitEventsLoading" class="px-3 py-3 text-slate-400">{{ t('불러오는 중…', 'Loading…') }}</div>
+        <div v-else-if="profitEvents.length === 0" class="px-3 py-3 text-slate-500">{{ t('리모콘 이력이 없습니다.', 'No remote history.') }}</div>
+        <div v-else class="max-h-[560px] overflow-auto">
+          <div v-for="p in profitEvents" :key="p.id" class="grid grid-cols-[150px_120px_60px_70px_minmax(0,1fr)_70px_50px] gap-x-3 px-3 py-1 hover:bg-white/[0.04]">
+            <span class="text-slate-400">{{ formatKillTime(p.createdAt) }}</span>
+            <span class="text-slate-200">{{ p.symbol }}</span>
+            <span :class="p.direction === 'up' ? 'text-emerald-300' : 'text-rose-300'">{{ p.direction === 'up' ? t('수익', 'UP') : t('손실', 'DOWN') }}</span>
+            <span class="text-slate-200">{{ p.percent }}%</span>
+            <span class="truncate text-slate-300">{{ p.basePrice }} → {{ p.shockedPrice }}</span>
+            <span class="text-slate-400">{{ (p.holdMs / 1000).toFixed(1) }}s</span>
+            <button type="button" class="text-left text-rose-300 hover:underline disabled:opacity-40" :disabled="profitEventDeleting === p.id" @click="deleteProfitEvent(p.id)">{{ t('삭제', 'del') }}</button>
+          </div>
+        </div>
+      </div>
+      <p class="mt-1 text-[11px] text-slate-500">{{ t('퍼센트는 레버리지 100x 기준', 'Percent is based on 100x leverage') }}</p>
+      <p v-if="profitEventsError" class="mt-2 text-[13px] text-red-300">{{ profitEventsError }}</p>
     </div>
 
-    <!-- DB 연결 상태 -->
-    <div v-show="activeTab === 'dbHealth'" class="rounded-2xl border border-white/10 bg-white/5 p-6">
-      <div class="flex items-center justify-between">
-        <div>
-          <h2 class="text-lg font-semibold">{{ t('DB 연결 상태', 'DB Connection Status') }}</h2>
-          <p class="mt-1 text-sm text-slate-400">
-            {{ t('지금 배포된 버전 표시', 'The currently deployed version marker') }}(<span class="font-data">{{ dbHealth?.marker || '…' }}</span>){{ t('를 SQLite/Supabase 양쪽에 직접 써보고 바로 다시 읽어서, 실제로 그 DB에 반영되는지 확인합니다. 실제 서비스 데이터와는 무관한 테스트입니다.', ' is written directly to both SQLite and Supabase, then read back immediately to verify it actually persists to that DB. This test is unrelated to real service data.') }}
-          </p>
-        </div>
-        <button
-          class="rounded-md bg-indigo-500 px-3 py-2 text-sm hover:bg-indigo-400 disabled:cursor-not-allowed disabled:opacity-50"
-          :disabled="dbHealthLoading"
-          @click="runDbHealthCheck"
-        >
-          {{ dbHealthLoading ? t('확인 중…', 'Checking…') : t('다시 확인', 'Recheck') }}
+    <!-- DB 연결 상태 — 디자인 H · 콘솔형: 이름: 값 을 고정폭 글자로 나열 -->
+    <div v-show="activeTab === 'dbHealth'" class="max-w-4xl">
+      <div class="mb-2 flex items-baseline justify-between gap-3">
+        <h2 class="text-base font-semibold text-slate-100">{{ t('DB 연결 상태', 'DB Connection Status') }}</h2>
+        <span class="text-[11px] text-slate-500">{{ t('디자인 H · 콘솔형', 'Design H · Console') }}</span>
+      </div>
+      <div class="mb-2 flex items-center justify-between gap-3 text-[13px]">
+        <p class="text-slate-400">
+          {{ t('지금 배포된 버전 표시', 'The deployed version marker') }}(<span class="font-data">{{ dbHealth?.marker || '…' }}</span>){{ t('를 SQLite/Supabase 양쪽에 써 보고 바로 다시 읽어 실제로 반영되는지 확인합니다(서비스 데이터와 무관).', ' is written to SQLite and Supabase and read back to verify (unrelated to service data).') }}
+        </p>
+        <button type="button" class="shrink-0 text-cyan-300 hover:underline disabled:opacity-40" :disabled="dbHealthLoading" @click="runDbHealthCheck">
+          {{ dbHealthLoading ? t('확인 중…', 'Checking…') : '▶ ' + t('다시 확인', 'Recheck') }}
         </button>
       </div>
-
-      <div v-if="dbHealth" class="mt-4 grid gap-4 sm:grid-cols-2">
-        <div
-          class="rounded-xl border p-4"
-          :class="dbHealth.sqlite.ok ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-rose-500/30 bg-rose-500/5'"
-        >
-          <div class="flex items-center justify-between">
-            <h3 class="font-semibold text-slate-100">
-              SQLite
-              <span v-if="dbHealth.activeMode === 'sqlite'" class="ml-1 rounded-full bg-indigo-500/20 px-2 py-0.5 text-[11px] text-indigo-200">{{ t('현재 사용중', 'Currently in use') }}</span>
-            </h3>
-            <span :class="dbHealth.sqlite.ok ? 'text-emerald-300' : 'text-rose-300'">{{ dbHealth.sqlite.ok ? t('✓ 정상 연결됨', '✓ Connected') : t('✗ 실패', '✗ Failed') }}</span>
+      <div v-if="dbHealth" class="rounded border border-white/10 bg-black/50 p-4 font-mono text-[12px] leading-6 text-slate-300">
+        <div v-for="db in [{ key: 'sqlite', name: 'SQLite', d: dbHealth.sqlite }, { key: 'supabase', name: 'Supabase', d: dbHealth.supabase }]" :key="db.key" class="mb-3 last:mb-0">
+          <div>
+            <span class="text-slate-100">[{{ db.name }}]</span>
+            <span class="ml-2" :class="db.d.ok ? 'text-emerald-300' : 'text-rose-300'">{{ db.d.ok ? 'OK' : 'FAIL' }}</span>
+            <span v-if="dbHealth.activeMode === db.key" class="ml-2 text-cyan-300">{{ t('(현재 사용중)', '(in use)') }}</span>
           </div>
-          <div class="mt-2 space-y-1 text-xs text-slate-400">
-            <div>{{ t('저장된 값:', 'Stored value:') }} <span class="font-data text-slate-200">{{ dbHealth.sqlite.marker ?? '—' }}</span></div>
-            <div>{{ t('확인 시각:', 'Checked at:') }} <span class="font-data text-slate-200">{{ dbHealth.sqlite.checkedAt ? formatKillTime(dbHealth.sqlite.checkedAt) : '—' }}</span></div>
-            <div class="truncate">{{ t('경로:', 'Path:') }} <span class="font-data text-slate-300">{{ dbHealth.sqlite.detail || '—' }}</span></div>
-            <div v-if="dbHealth.sqlite.error" class="text-rose-300">{{ t('에러:', 'Error:') }} {{ dbHealth.sqlite.error }}</div>
-          </div>
-        </div>
-
-        <div
-          class="rounded-xl border p-4"
-          :class="dbHealth.supabase.ok ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-rose-500/30 bg-rose-500/5'"
-        >
-          <div class="flex items-center justify-between">
-            <h3 class="font-semibold text-slate-100">
-              Supabase
-              <span v-if="dbHealth.activeMode === 'supabase'" class="ml-1 rounded-full bg-indigo-500/20 px-2 py-0.5 text-[11px] text-indigo-200">{{ t('현재 사용중', 'Currently in use') }}</span>
-            </h3>
-            <span :class="dbHealth.supabase.ok ? 'text-emerald-300' : 'text-rose-300'">{{ dbHealth.supabase.ok ? t('✓ 정상 연결됨', '✓ Connected') : t('✗ 실패', '✗ Failed') }}</span>
-          </div>
-          <div class="mt-2 space-y-1 text-xs text-slate-400">
-            <div>{{ t('저장된 값:', 'Stored value:') }} <span class="font-data text-slate-200">{{ dbHealth.supabase.marker ?? '—' }}</span></div>
-            <div>{{ t('확인 시각:', 'Checked at:') }} <span class="font-data text-slate-200">{{ dbHealth.supabase.checkedAt ? formatKillTime(dbHealth.supabase.checkedAt) : '—' }}</span></div>
-            <div class="truncate">{{ t('프로젝트 이름:', 'Project Name:') }} <span class="font-data text-slate-300">{{ dbHealth.supabase.projectName || '—' }}</span></div>
-            <div class="truncate">{{ t('프로젝트 URL:', 'Project URL:') }} <span class="font-data text-slate-300">{{ dbHealth.supabase.detail || '—' }}</span></div>
-            <div v-if="dbHealth.supabase.error" class="text-rose-300">{{ t('에러:', 'Error:') }} {{ dbHealth.supabase.error }}</div>
-          </div>
+          <div><span class="inline-block w-28 text-slate-500">{{ t('저장된 값', 'stored') }}</span>= {{ db.d.marker ?? '—' }}</div>
+          <div><span class="inline-block w-28 text-slate-500">{{ t('확인 시각', 'checked_at') }}</span>= {{ db.d.checkedAt ? formatKillTime(db.d.checkedAt) : '—' }}</div>
+          <div v-if="db.key === 'supabase'"><span class="inline-block w-28 text-slate-500">{{ t('프로젝트 이름', 'project') }}</span>= {{ dbHealth.supabase.projectName || '—' }}</div>
+          <div class="truncate"><span class="inline-block w-28 text-slate-500">{{ db.key === 'sqlite' ? t('경로', 'path') : t('프로젝트 URL', 'url') }}</span>= {{ db.d.detail || '—' }}</div>
+          <div v-if="db.d.error" class="text-rose-300"><span class="inline-block w-28 text-slate-500">{{ t('에러', 'error') }}</span>= {{ db.d.error }}</div>
         </div>
       </div>
-      <p v-else-if="dbHealthLoading" class="mt-4 text-sm text-slate-400">{{ t('확인 중…', 'Checking…') }}</p>
-      <p v-if="dbHealthError" class="mt-3 text-sm text-red-300">{{ dbHealthError }}</p>
+      <p v-else-if="dbHealthLoading" class="text-[13px] text-slate-400">{{ t('확인 중…', 'Checking…') }}</p>
+      <p v-if="dbHealthError" class="mt-2 text-[13px] text-red-300">{{ dbHealthError }}</p>
     </div>
 
     <!-- 역할 메뉴 권한 설정 팝업 -->
