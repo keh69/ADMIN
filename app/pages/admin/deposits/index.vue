@@ -95,7 +95,7 @@
       </div>
 
       <div class="overflow-x-auto">
-        <table class="w-full border-collapse text-[15px] text-slate-200">
+        <table class="w-full border-collapse text-[14px] text-slate-200">
           <thead class="bg-white/[0.04] text-slate-400">
             <tr>
               <th v-if="isSuperAdmin" class="border border-white/10 px-2 py-1 w-9 text-left font-normal">

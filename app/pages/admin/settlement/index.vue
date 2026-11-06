@@ -76,7 +76,7 @@
       </div>
 
       <div class="mt-2 overflow-x-auto">
-        <table class="w-full border-collapse text-[15px] text-slate-200">
+        <table class="w-full border-collapse text-[14px] text-slate-200">
           <thead class="bg-white/[0.04] text-slate-400">
             <tr>
               <th class="border border-white/10 px-2 py-1 sortable-th cursor-pointer select-none whitespace-nowrap text-left font-normal" @click="toggleSort('username')">{{ t('회원 아이디', 'Username') }}<span class="sort-icon">{{ sortArrow('username') || ' ⇅' }}</span></th>
