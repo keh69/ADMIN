@@ -290,12 +290,33 @@
           <div class="flex items-start justify-between gap-3">
             <div>
               <h2 class="text-lg font-semibold text-slate-100">{{ t(`${selectedMember.name} 보유금액 수정`, `Edit ${selectedMember.name} Balance`) }}</h2>
-              <p class="mt-1 text-sm text-slate-400">{{ t('현재 보유 현금 USDT를 직접 수정합니다.', 'Directly edit the current USDT cash balance.') }}</p>
+              <p class="mt-1 text-sm text-slate-400">
+                {{ balanceInKrw ? t('현재 보유금액을 원화로 직접 수정합니다.', 'Directly edit the current balance in KRW.') : t('현재 보유 현금 USDT를 직접 수정합니다.', 'Directly edit the current USDT cash balance.') }}
+              </p>
             </div>
             <button type="button" class="rounded-md bg-white/10 px-3 py-2 text-sm text-slate-100 hover:bg-white/15" @click="closeBalanceModal">{{ t('닫기', 'Close') }}</button>
           </div>
 
           <div class="mt-4">
+            <template v-if="balanceInKrw">
+              <label class="text-sm text-slate-300">{{ t('보유금액 (원)', 'Balance (KRW)') }}</label>
+              <div class="mt-2 flex items-center rounded-md border border-[#173753] bg-[#041425] px-3 py-2">
+                <input
+                  :value="balanceKrwText"
+                  type="text"
+                  inputmode="numeric"
+                  class="w-full bg-transparent text-right text-sm text-slate-100 outline-none"
+                  :disabled="!canEditBalance || balanceSaving"
+                  @input="onBalanceKrwInput"
+                  @keydown.enter="saveBalance"
+                />
+                <span class="ml-2 text-sm text-slate-400">{{ t('원', 'KRW') }}</span>
+              </div>
+              <p class="mt-2 text-xs text-slate-500">
+                ≈ {{ fmt2(balanceKrwNumber / krwPerUsdt) }} USDT · {{ t('환율', 'Rate') }} {{ krwPerUsdt.toLocaleString('ko-KR') }}{{ t('원', ' KRW') }}/USDT
+              </p>
+            </template>
+            <template v-else>
             <label class="text-sm text-slate-300">{{ t('보유금액 (USDT)', 'Balance (USDT)') }}</label>
             <input
               v-model.number="balanceDraft"
@@ -305,6 +326,7 @@
               class="mt-2 w-full rounded-md border border-[#173753] bg-[#041425] px-3 py-2 text-sm text-slate-100 outline-none"
               :disabled="!canEditBalance || balanceSaving"
             />
+            </template>
           </div>
 
           <p v-if="balanceError" class="mt-3 text-sm text-rose-300">{{ balanceError }}</p>
@@ -706,9 +728,23 @@ function closeTradeModal() {
   if (!balanceModalOpen.value) selectedMember.value = null
 }
 
+// 보유금액 수정은 화면에 보이는 그대로 원화로 입력받고, 저장할 때 현재 환율로 USDT로 바꿔 저장한다(환율을 못 불러오면 USDT 입력).
+const balanceInKrw = computed(() => krwPerUsdt.value > 0)
+const balanceKrwText = ref('')
+let balanceKrwInitial = ''
+const balanceKrwNumber = computed(() => Number(balanceKrwText.value.replace(/[^\d]/g, '') || 0))
+function onBalanceKrwInput(e: Event) {
+  const el = e.target as HTMLInputElement
+  const digits = el.value.replace(/[^\d]/g, '').replace(/^0+(?=\d)/, '')
+  balanceKrwText.value = digits ? Number(digits).toLocaleString('ko-KR') : ''
+  el.value = balanceKrwText.value
+}
+
 function openBalanceModal(member: MemberRow) {
   selectedMember.value = member
   balanceDraft.value = Number(member.balanceUsdt || 0)
+  balanceKrwText.value = balanceInKrw.value ? Math.round(Number(member.balanceUsdt || 0) * krwPerUsdt.value).toLocaleString('ko-KR') : ''
+  balanceKrwInitial = balanceKrwText.value
   balanceError.value = null
   balanceModalOpen.value = true
 }
@@ -722,7 +758,15 @@ function closeBalanceModal() {
 
 async function saveBalance() {
   if (!selectedMember.value) return
-  const usdt = Number(balanceDraft.value)
+  let usdt = Number(balanceDraft.value)
+  if (balanceInKrw.value) {
+    if (!balanceKrwText.value) {
+      balanceError.value = t('금액을 입력하세요.', 'Enter an amount.')
+      return
+    }
+    // 원화 값을 그대로 두고 저장하면 기존 USDT 값을 그대로 유지(환산 반올림으로 값이 미세하게 바뀌지 않게)
+    usdt = balanceKrwText.value === balanceKrwInitial ? Number(selectedMember.value.balanceUsdt || 0) : balanceKrwNumber.value / krwPerUsdt.value
+  }
   if (!Number.isFinite(usdt) || usdt < 0) {
     balanceError.value = t('0 이상 금액만 입력할 수 있습니다.', 'Only amounts of 0 or more can be entered.')
     return
