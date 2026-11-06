@@ -31,12 +31,16 @@ function playChimeSound() {
   }
 }
 
+// 팝업 닫힘 타이머는 화면 전체에서 하나만 쓴다(레이아웃과 화면 이동 알림이 같은 팝업을 쓰므로).
+let toastTimer: any = null
+// 쪽지를 읽는 화면에서는 "안 읽은 쪽지" 팝업을 띄우지 않는다.
+const READING_PATHS = ["/admin/messages"]
+
 export function useMessages() {
   const unread = useState<number>('messages_unread_count', () => 0)
   const loading = useState<boolean>('messages_unread_loading', () => false)
   const toast = useState<{ visible: boolean; text: string } | null>('messages_toast', () => null)
   let pollTimer: any = null
-  let toastTimer: any = null
   let initialized = false
   // 이번 화면(탭)에 들어와서 미확인 쪽지가 있을 때 울리는 "진입 알림음"은 세션당 한 번만 울린다.
   let entryChimePlayed = false
@@ -116,5 +120,25 @@ export function useMessages() {
     pollTimer = null
   }
 
-  return { unread, loading, toast, refreshUnread, startUnreadPolling, stopUnreadPolling, openNewMessage }
+  // 어떤 화면에 들어가든(화면 이동이 끝날 때마다) 안 읽은 쪽지가 남아 있으면 "새 쪽지가 도착했습니다" 팝업을 띄운다(회원·관리자 모두).
+  // 알림음은 울리지 않는다(진입 알림음/실시간 도착 알림음은 기존 규칙 그대로).
+  async function remindUnreadOnEnter(path: string) {
+    if (!process.client) return
+    const { me } = useMe()
+    if (!me.value || isViewOnlyAdmin()) return
+    if (READING_PATHS.some((p) => path === p || path.startsWith(p + '/'))) return
+    try {
+      const data = await $fetch<{ unread: number }>('/api/messages/unread', { credentials: 'include' })
+      const n = Number(data.unread || 0)
+      unread.value = n
+      if (n > 0) {
+        const { t } = useLocale()
+        showToast(t('새 쪽지가 도착했습니다.', 'A new message has arrived.'))
+      }
+    } catch {
+      // 확인 실패 시 조용히 넘어간다
+    }
+  }
+
+  return { unread, loading, toast, refreshUnread, startUnreadPolling, stopUnreadPolling, openNewMessage, remindUnreadOnEnter }
 }
