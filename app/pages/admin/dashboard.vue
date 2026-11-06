@@ -66,6 +66,7 @@
             <thead class="sticky top-0 bg-[#050d1a] text-slate-400">
               <tr class="border-b border-white/10 text-left">
                 <th class="px-[10px] py-2 font-medium">{{ t('날짜', 'Date') }}</th>
+                <th class="px-[10px] py-2 font-medium">{{ t('시간', 'Time') }}</th>
                 <th class="px-[10px] py-2 font-medium">{{ t('회원', 'Member') }}</th>
                 <th class="px-[10px] py-2 font-medium">{{ t('심볼', 'Symbol') }}</th>
                 <th class="px-[10px] py-2 font-medium">{{ t('포지션', 'Side') }}</th>
@@ -74,10 +75,11 @@
             </thead>
             <tbody>
               <tr v-if="!data?.recentTrades.length" class="border-b border-white/5">
-                <td colspan="5" class="px-[10px] py-6 text-center text-slate-500">{{ t('거래 내역이 없습니다.', 'No trades.') }}</td>
+                <td colspan="6" class="px-[10px] py-6 text-center text-slate-500">{{ t('거래 내역이 없습니다.', 'No trades.') }}</td>
               </tr>
               <tr v-for="tr in data?.recentTrades || []" :key="tr.id" class="border-b border-white/5">
-                <td class="whitespace-nowrap px-[10px] py-2.5 text-slate-300">{{ fmtDateTime(tr.createdAt) }}</td>
+                <td class="whitespace-nowrap px-[10px] py-2.5 text-slate-300">{{ fmtShortDate(tr.createdAt) }}</td>
+                <td class="whitespace-nowrap px-[10px] py-2.5 font-mono text-slate-400">{{ fmtTime(tr.createdAt) }}</td>
                 <td class="px-[10px] py-2.5 text-slate-100">{{ tr.username }}</td>
                 <td class="px-[10px] py-2.5 font-semibold text-slate-100">{{ tr.symbol }}</td>
                 <td class="px-[10px] py-2.5" :class="tr.side === 'long' ? 'text-emerald-300' : 'text-rose-300'">{{ tr.side === 'long' ? t('롱', 'Long') : t('숏', 'Short') }}</td>
@@ -104,26 +106,28 @@
           </NuxtLink>
         </div>
         <div class="mt-3 min-h-0 flex-1 overflow-auto">
-          <table class="w-full text-[13px]">
+          <table class="w-full table-fixed text-[13px]">
             <thead class="sticky top-0 bg-[#050d1a] text-slate-400">
               <tr class="border-b border-white/10 text-left">
-                <th class="px-[10px] py-2 font-medium">{{ t('날짜', 'Date') }}</th>
-                <th class="px-[10px] py-2 font-medium">{{ t('금액', 'Amount') }}</th>
-                <th class="px-[10px] py-2 font-medium">{{ t(blk.nameKo, blk.nameEn) }}</th>
-                <th v-if="showTopCode" class="px-[10px] py-2 font-medium">{{ t('총판명', 'Top Code') }}</th>
-                <th class="px-[10px] py-2 font-medium">{{ t(blk.statusKo, blk.statusEn) }}</th>
+                <th class="w-[3.6rem] px-1.5 py-2 font-medium">{{ t('날짜', 'Date') }}</th>
+                <th class="w-[3.4rem] px-1.5 py-2 font-medium">{{ t('시간', 'Time') }}</th>
+                <th class="w-[6.4rem] px-1.5 py-2 font-medium">{{ t('금액', 'Amount') }}</th>
+                <th class="px-1.5 py-2 font-medium">{{ t(blk.nameKo, blk.nameEn) }}</th>
+                <th v-if="showTopCode" class="px-1.5 py-2 font-medium">{{ t('총판명', 'Top Code') }}</th>
+                <th class="w-[4.8rem] px-1.5 py-2 font-medium">{{ t(blk.statusKo, blk.statusEn) }}</th>
               </tr>
             </thead>
             <tbody>
               <tr v-if="!blk.rows.length" class="border-b border-white/5">
-                <td colspan="5" class="px-[10px] py-6 text-center text-slate-500">{{ t('내역이 없습니다.', 'No records.') }}</td>
+                <td colspan="6" class="px-[10px] py-6 text-center text-slate-500">{{ t('내역이 없습니다.', 'No records.') }}</td>
               </tr>
               <tr v-for="r in blk.rows" :key="r.id" class="border-b border-white/5">
-                <td class="whitespace-nowrap px-[10px] py-2.5 text-slate-300">{{ fmtShortDate(r.createdAt) }}</td>
-                <td class="whitespace-nowrap px-[10px] py-2.5 font-semibold text-slate-100">{{ fmtMan(r.krwAmount) }}</td>
-                <td class="px-[10px] py-2.5 text-slate-100">{{ r.name || r.username }}</td>
-                <td v-if="showTopCode" class="px-[10px] py-2.5 text-slate-100">{{ r.topCode || '—' }}</td>
-                <td class="px-[10px] py-2.5">
+                <td class="whitespace-nowrap px-1.5 py-2.5 text-slate-300">{{ fmtShortDate(r.createdAt) }}</td>
+                <td class="whitespace-nowrap px-1.5 py-2.5 font-mono text-slate-400">{{ fmtTime(r.createdAt) }}</td>
+                <td class="truncate whitespace-nowrap px-1.5 py-2.5 font-semibold text-slate-100">{{ fmtMan(r.krwAmount) }}</td>
+                <td class="truncate px-1.5 py-2.5 text-slate-100" :title="r.name || r.username">{{ r.name || r.username }}</td>
+                <td v-if="showTopCode" class="truncate px-1.5 py-2.5 text-slate-100" :title="r.topCode">{{ r.topCode || '—' }}</td>
+                <td class="whitespace-nowrap px-1.5 py-2.5">
                   <span class="inline-flex items-center gap-1 rounded px-2 py-0.5 text-[11px] font-semibold" :class="statusClass(r.status)">
                     {{ statusLabel(r.status) }}
                   </span>
@@ -200,6 +204,12 @@ function fmtShortDate(iso: string) {
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return ''
   return `${pad(d.getMonth() + 1)}. ${pad(d.getDate())}`
+}
+// 시간(24시 기준, 예: 13:05)
+function fmtTime(iso: string) {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return ''
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 function fmtDateTime(iso: string) {
   const d = new Date(iso)
