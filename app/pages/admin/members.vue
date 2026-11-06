@@ -34,7 +34,7 @@
       </div>
 
       <div class="overflow-x-auto">
-        <table class="w-auto border-collapse text-[13px] text-slate-200">
+        <table class="w-auto border-collapse text-[15px] text-slate-200">
           <thead class="bg-white/[0.04] text-left text-slate-400">
             <tr>
               <th class="w-10 whitespace-nowrap border border-white/10 px-2 py-1 text-center font-normal">#</th>
