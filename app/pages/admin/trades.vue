@@ -1,7 +1,7 @@
 <template>
-  <!-- 회원목록과 같은 표 디자인: 표 폭에 맞춘 한 덩어리를 화면 가운데에 -->
+  <!-- 회원목록과 같은 표 디자인: 폭 1500px 한 덩어리(제목·검색줄·표·페이지)를 화면 가운데에 -->
   <div class="lg:mx-[calc(24px_-_21.42857%)]">
-  <div class="mx-auto w-fit max-w-full space-y-3">
+  <div class="mx-auto w-[1500px] max-w-full space-y-3">
     <div class="flex items-end justify-between gap-3">
       <div>
         <h1 class="text-base font-semibold text-slate-100">{{ t('거래 내역', 'Trade History') }}</h1>
@@ -50,7 +50,7 @@
       </div>
 
       <div class="overflow-x-auto">
-        <table class="mx-auto w-auto border-collapse text-[15px] text-slate-200">
+        <table class="w-full border-collapse text-[15px] text-slate-200">
           <thead class="bg-white/[0.04] text-slate-400">
             <tr>
               <th class="border border-white/10 px-2 py-1 text-left font-normal">{{ t('날짜', 'Date') }}</th>
