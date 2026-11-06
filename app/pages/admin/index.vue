@@ -372,47 +372,56 @@
     <div v-show="activeTab === 'dumpError'" class="rounded-2xl border border-white/10 bg-white/5 p-6">
       <h2 class="text-lg font-semibold">{{ t('덤프오류', 'Dump Error') }}</h2>
       <p class="mt-1 text-sm text-slate-400">
-        {{ t('ON이면 거래소 차트 화면에 로그인한 회원에게 설정한 시간(n~n초 사이 무작위) 뒤 덤프 에러로그가 화면 전체로 뜹니다. OFF면 뜨지 않습니다.', 'When ON, logged-in members on the exchange chart screen see a full-screen dump error log after a random n~n seconds. When OFF it does not appear.') }}
+        {{ t('ON이면 그 사이트(거래소 / 테스트) 차트 화면에 로그인한 회원에게 설정한 시간(n~n초 사이 무작위) 뒤 덤프 에러로그가 화면 전체로 뜹니다. OFF면 뜨지 않습니다.', 'When ON, logged-in members on that site\'s (exchange / test) chart screen see a full-screen dump error log after a random n~n seconds. When OFF it does not appear.') }}
       </p>
-      <div class="mt-4 flex flex-wrap items-center gap-4">
-        <button
-          type="button"
-          class="rounded-full px-5 py-2 text-sm font-semibold"
-          :class="dumpDraft.enabled ? 'bg-emerald-500 text-white' : 'bg-white/10 text-slate-300'"
-          @click="dumpDraft.enabled = !dumpDraft.enabled"
+      <div class="mt-4 space-y-3">
+        <div
+          v-for="row in dumpRows"
+          :key="row.site"
+          class="rounded-xl border border-white/10 bg-white/5 p-4"
         >
-          {{ dumpDraft.enabled ? 'ON' : 'OFF' }}
-        </button>
-        <div class="flex items-center gap-2 text-sm text-slate-300">
-          <span>{{ t('덤프생성시간', 'Dump delay') }}</span>
-          <input
-            v-model.number="dumpDraft.minSec"
-            type="number"
-            min="0"
-            step="1"
-            class="w-24 rounded-md bg-white/5 px-3 py-2 text-sm outline-none ring-1 ring-white/10 focus:ring-indigo-500"
-          />
-          <span>~</span>
-          <input
-            v-model.number="dumpDraft.maxSec"
-            type="number"
-            min="0"
-            step="1"
-            class="w-24 rounded-md bg-white/5 px-3 py-2 text-sm outline-none ring-1 ring-white/10 focus:ring-indigo-500"
-          />
-          <span>{{ t('초', 'sec') }}</span>
+          <div class="flex flex-wrap items-center gap-4">
+            <span class="w-28 text-sm font-semibold text-slate-200">{{ row.label }}</span>
+            <button
+              type="button"
+              class="rounded-full px-5 py-2 text-sm font-semibold"
+              :class="dumpDraft[row.site].enabled ? 'bg-emerald-500 text-white' : 'bg-white/10 text-slate-300'"
+              @click="dumpDraft[row.site].enabled = !dumpDraft[row.site].enabled"
+            >
+              {{ dumpDraft[row.site].enabled ? 'ON' : 'OFF' }}
+            </button>
+            <div class="flex items-center gap-2 text-sm text-slate-300">
+              <span>{{ t('덤프생성시간', 'Dump delay') }}</span>
+              <input
+                v-model.number="dumpDraft[row.site].minSec"
+                type="number"
+                min="0"
+                step="1"
+                class="w-24 rounded-md bg-white/5 px-3 py-2 text-sm outline-none ring-1 ring-white/10 focus:ring-indigo-500"
+              />
+              <span>~</span>
+              <input
+                v-model.number="dumpDraft[row.site].maxSec"
+                type="number"
+                min="0"
+                step="1"
+                class="w-24 rounded-md bg-white/5 px-3 py-2 text-sm outline-none ring-1 ring-white/10 focus:ring-indigo-500"
+              />
+              <span>{{ t('초', 'sec') }}</span>
+            </div>
+            <button
+              type="button"
+              class="rounded-md bg-indigo-500 px-4 py-2 text-sm font-semibold hover:bg-indigo-400 disabled:opacity-50"
+              :disabled="dumpSaving[row.site]"
+              @click="saveDumpSettings(row.site)"
+            >
+              {{ dumpSaving[row.site] ? t('저장 중…', 'Saving…') : t('저장', 'Save') }}
+            </button>
+          </div>
+          <p v-if="dumpError[row.site]" class="mt-2 text-sm text-red-300">{{ dumpError[row.site] }}</p>
+          <p v-if="dumpMsg[row.site]" class="mt-2 text-sm text-emerald-300">{{ dumpMsg[row.site] }}</p>
         </div>
-        <button
-          type="button"
-          class="rounded-md bg-indigo-500 px-4 py-2 text-sm font-semibold hover:bg-indigo-400 disabled:opacity-50"
-          :disabled="dumpSaving"
-          @click="saveDumpSettings"
-        >
-          {{ dumpSaving ? t('저장 중…', 'Saving…') : t('저장', 'Save') }}
-        </button>
       </div>
-      <p v-if="dumpError" class="mt-3 text-sm text-red-300">{{ dumpError }}</p>
-      <p v-if="dumpMsg" class="mt-3 text-sm text-emerald-300">{{ dumpMsg }}</p>
     </div>
 
     <!-- 정산/기타 설정 -->
@@ -3053,37 +3062,50 @@ watch(activeTab, (t) => {
 })
 
 // 덤프오류 (임시 · 보여주기용): 거래소 차트 화면 덤프 에러로그 on/off 와 생성시간(n~n초)
-const dumpDraft = reactive({ enabled: false, minSec: 5, maxSec: 10 })
-const dumpSaving = ref(false)
-const dumpError = ref<string | null>(null)
-const dumpMsg = ref<string | null>(null)
+// 거래소(ktx)와 테스트(test) 사이트를 따로 설정한다.
+type DumpSite = 'ktx' | 'test'
+type DumpCfg = { enabled: boolean; minSec: number; maxSec: number }
+const dumpRows = computed<Array<{ site: DumpSite; label: string }>>(() => [
+  { site: 'ktx', label: t('거래소 덤프', 'Exchange dump') },
+  { site: 'test', label: t('테스트 덤프', 'Test dump') }
+])
+const dumpDraft = reactive<Record<DumpSite, DumpCfg>>({
+  ktx: { enabled: false, minSec: 5, maxSec: 10 },
+  test: { enabled: false, minSec: 5, maxSec: 10 }
+})
+const dumpSaving = reactive<Record<DumpSite, boolean>>({ ktx: false, test: false })
+const dumpError = reactive<Record<DumpSite, string | null>>({ ktx: null, test: null })
+const dumpMsg = reactive<Record<DumpSite, string | null>>({ ktx: null, test: null })
 async function loadDumpSettings() {
   try {
-    const d = await $fetch<{ enabled: boolean; minSec: number; maxSec: number }>('/api/admin/settings/dump-error')
-    Object.assign(dumpDraft, d)
+    const d = await $fetch<Record<DumpSite, DumpCfg>>('/api/admin/settings/dump-error')
+    if (d?.ktx) Object.assign(dumpDraft.ktx, d.ktx)
+    if (d?.test) Object.assign(dumpDraft.test, d.test)
   } catch {
     // 기본값 유지
   }
 }
-async function saveDumpSettings() {
-  dumpSaving.value = true
-  dumpError.value = null
-  dumpMsg.value = null
+async function saveDumpSettings(site: DumpSite) {
+  dumpSaving[site] = true
+  dumpError[site] = null
+  dumpMsg[site] = null
   try {
-    const d = await $fetch<{ enabled: boolean; minSec: number; maxSec: number }>('/api/admin/settings/dump-error', {
+    const cur = dumpDraft[site]
+    const d = await $fetch<DumpCfg>('/api/admin/settings/dump-error', {
       method: 'POST',
       body: {
-        enabled: !!dumpDraft.enabled,
-        minSec: Math.max(0, Math.floor(Number(dumpDraft.minSec) || 0)),
-        maxSec: Math.max(0, Math.floor(Number(dumpDraft.maxSec) || 0))
+        site,
+        enabled: !!cur.enabled,
+        minSec: Math.max(0, Math.floor(Number(cur.minSec) || 0)),
+        maxSec: Math.max(0, Math.floor(Number(cur.maxSec) || 0))
       }
     })
-    Object.assign(dumpDraft, { enabled: d.enabled, minSec: d.minSec, maxSec: d.maxSec })
-    dumpMsg.value = t('저장되었습니다.', 'Saved.')
+    Object.assign(dumpDraft[site], { enabled: d.enabled, minSec: d.minSec, maxSec: d.maxSec })
+    dumpMsg[site] = t('저장되었습니다.', 'Saved.')
   } catch (e: any) {
-    dumpError.value = e?.data?.statusMessage || t('저장 실패', 'Save failed')
+    dumpError[site] = e?.data?.statusMessage || t('저장 실패', 'Save failed')
   } finally {
-    dumpSaving.value = false
+    dumpSaving[site] = false
   }
 }
 
