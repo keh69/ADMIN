@@ -75,32 +75,65 @@
                 </select>
                 <span v-else class="block px-2 py-1 text-slate-100">{{ u.role }}</span>
               </td>
-              <!-- 승인상태: 승인 / 거절 / 대기 중 하나를 누른다(지금 상태가 색으로 표시) -->
+              <!-- 승인상태: 버튼 하나(지금 상태가 색으로 표시) — 누르면 승인 / 거절 / 대기 중 하나를 고른다 -->
               <td class="whitespace-nowrap border border-white/10 px-2 py-1">
                 <template v-if="canEditBalance && u.roleId !== 'super_admin'">
-                  <button
-                    v-for="st in APPROVAL_OPTIONS"
-                    :key="st.key"
-                    type="button"
-                    class="mr-1 border px-2 py-0.5 text-[12px] last:mr-0 disabled:opacity-40"
-                    :class="(u.approvalStatus || 'approved') === st.key ? st.on : 'border-white/20 bg-white/[0.06] text-slate-400 hover:bg-white/10'"
+                  <select
+                    :value="u.approvalStatus || 'approved'"
+                    class="cursor-pointer border px-2 py-0.5 text-[12px] outline-none disabled:opacity-40 [&>option]:bg-[#0b1726] [&>option]:text-slate-100"
+                    :class="(APPROVAL_OPTIONS.find((o) => o.key === (u.approvalStatus || 'approved')) || APPROVAL_OPTIONS[0]).on"
                     :disabled="approvalSavingId === u.id"
-                    @click="setApproval(u, st.key)"
+                    @change="setApproval(u, ($event.target as HTMLSelectElement).value as any)"
                   >
-                    {{ t(st.ko, st.en) }}
-                  </button>
+                    <option v-for="st in APPROVAL_OPTIONS" :key="st.key" :value="st.key">{{ t(st.ko, st.en) }}</option>
+                  </select>
                 </template>
                 <span v-else :class="approvalText(u.approvalStatus).cls">{{ t(approvalText(u.approvalStatus).ko, approvalText(u.approvalStatus).en) }}</span>
               </td>
               <td class="whitespace-nowrap border border-white/10 px-2 py-1 font-mono text-slate-100">
                 <button type="button" class="underline-offset-4 hover:text-cyan-300 hover:underline" @click="memberInfoModal?.open(u.username)">{{ u.username }}</button>
               </td>
-              <td class="whitespace-nowrap border border-white/10 px-2 py-1 text-slate-200">{{ u.name }}</td>
-              <td class="whitespace-nowrap border border-white/10 px-2 py-1 font-mono text-slate-300">{{ u.referralCode || '—' }}</td>
+              <!-- 회원이름·추천코드·보유금액: 더블클릭하면 그 자리에서 바로 수정(Enter/다른 곳 클릭 = 저장, Esc = 취소) -->
+              <td class="whitespace-nowrap border border-white/10 px-2 py-1 text-slate-200" :class="canEditCell(u, 'name') ? 'cursor-text' : ''" @dblclick="startEdit(u, 'name')">
+                <input
+                  v-if="isEditing(u, 'name')"
+                  :ref="setEditInput"
+                  :value="editValue"
+                  class="w-full min-w-[6em] bg-black/50 px-1 py-0  text-white outline-none ring-1 ring-cyan-400"
+                  @input="onEditInput"
+                  @keydown.enter.prevent="commitEdit(u)"
+                  @keydown.esc.prevent="cancelEdit"
+                  @blur="commitEdit(u)"
+                />
+                <template v-else>{{ u.name || '—' }}</template>
+              </td>
+              <td class="whitespace-nowrap border border-white/10 px-2 py-1 font-mono text-slate-300" :class="canEditCell(u, 'referralCode') ? 'cursor-text' : ''" @dblclick="startEdit(u, 'referralCode')">
+                <input
+                  v-if="isEditing(u, 'referralCode')"
+                  :ref="setEditInput"
+                  :value="editValue"
+                  class="w-full min-w-[8ch] bg-black/50 px-1 py-0 font-mono text-white outline-none ring-1 ring-cyan-400"
+                  @input="onEditInput"
+                  @keydown.enter.prevent="commitEdit(u)"
+                  @keydown.esc.prevent="cancelEdit"
+                  @blur="commitEdit(u)"
+                />
+                <template v-else>{{ u.referralCode || '—' }}</template>
+              </td>
               <td v-if="showTopCode" class="whitespace-nowrap border border-white/10 px-2 py-1 font-mono text-slate-500">{{ u.topCode || '—' }}</td>
-              <td class="whitespace-nowrap border border-white/10 px-2 py-1 text-right font-mono">
-                <button v-if="canEditBalance" type="button" class="border border-white/20 bg-white/[0.06] px-2 py-0.5 text-cyan-100 hover:bg-white/10" @click="openBalanceModal(u)">{{ fmtBal(u.balanceUsdt) }}</button>
-                <span v-else class="text-slate-300">{{ fmtBal(u.balanceUsdt) }}</span>
+              <td class="whitespace-nowrap border border-white/10 px-2 py-1 text-right font-mono text-slate-200" :class="canEditCell(u, 'balance') ? 'cursor-text' : ''" @dblclick="startEdit(u, 'balance')">
+                <input
+                  v-if="isEditing(u, 'balance')"
+                  :ref="setEditInput"
+                  :value="editValue"
+                  inputmode="numeric"
+                  class="w-full min-w-[12ch] bg-black/50 px-1 py-0 text-right font-mono text-white outline-none ring-1 ring-cyan-400"
+                  @input="onEditInput"
+                  @keydown.enter.prevent="commitEdit(u)"
+                  @keydown.esc.prevent="cancelEdit"
+                  @blur="commitEdit(u)"
+                />
+                <template v-else>{{ fmtBal(u.balanceUsdt) }}</template>
               </td>
               <td class="whitespace-nowrap border border-white/10 px-2 py-1 text-right font-mono text-slate-200">{{ isStaff(u) ? '-' : fmtKrw(u.totalDepositKrw) }}</td>
               <td class="whitespace-nowrap border border-white/10 px-2 py-1 text-right font-mono text-slate-200">{{ isStaff(u) ? '-' : fmtKrw(u.totalWithdrawKrw) }}</td>
@@ -428,6 +461,90 @@ function approvalText(st?: string) {
   return { ko: '승인', en: 'Approved', cls: 'text-emerald-300' }
 }
 const approvalSavingId = ref<number | null>(null)
+
+// ── 표에서 바로 고치기(더블클릭): 회원이름 / 추천코드 / 보유금액(원화로 입력 → 현재 환율로 USDT 저장) ──
+type EditField = 'name' | 'referralCode' | 'balance'
+const editCell = ref<{ id: number; field: EditField } | null>(null)
+const editValue = ref('')
+let editInitial = ''
+let editSaving = false
+let editInputEl: HTMLInputElement | null = null
+function setEditInput(el: any) {
+  if (el) editInputEl = el as HTMLInputElement
+}
+function canEditCell(u: MemberRow, field: EditField) {
+  if (!canEditBalance.value) return false
+  if (field === 'referralCode') return me.value?.role === 'super_admin' && u.roleId !== 'super_admin'
+  if (field === 'name') return u.roleId !== 'super_admin'
+  return true
+}
+function isEditing(u: MemberRow, field: EditField) {
+  return editCell.value?.id === u.id && editCell.value?.field === field
+}
+function balanceEditText(usdt: number) {
+  if (krwPerUsdt.value > 0) return Math.round(Number(usdt || 0) * krwPerUsdt.value).toLocaleString('ko-KR')
+  return String(Number(usdt || 0))
+}
+function startEdit(u: MemberRow, field: EditField) {
+  if (!canEditCell(u, field)) return
+  editCell.value = { id: u.id, field }
+  editValue.value = field === 'balance' ? balanceEditText(u.balanceUsdt) : String((u as any)[field] || '')
+  editInitial = editValue.value
+  // 바로 입력 커서가 깜박이게(글자 끝에 커서)
+  nextTick(() => {
+    const el = editInputEl
+    if (!el) return
+    el.focus()
+    const n = el.value.length
+    el.setSelectionRange(n, n)
+  })
+}
+function onEditInput(e: Event) {
+  const el = e.target as HTMLInputElement
+  if (editCell.value?.field === 'balance' && krwPerUsdt.value > 0) {
+    const digits = el.value.replace(/[^\d]/g, '').replace(/^0+(?=\d)/, '')
+    editValue.value = digits ? Number(digits).toLocaleString('ko-KR') : ''
+    el.value = editValue.value
+  } else {
+    editValue.value = el.value
+  }
+}
+function cancelEdit() {
+  editCell.value = null
+}
+async function commitEdit(u: MemberRow) {
+  const cell = editCell.value
+  if (!cell || cell.id !== u.id || editSaving) return
+  const value = editValue.value.trim()
+  if (value === editInitial.trim()) {
+    editCell.value = null
+    return
+  }
+  editSaving = true
+  error.value = null
+  try {
+    const body: Record<string, any> = { userId: u.id }
+    if (cell.field === 'name') body.name = value
+    else if (cell.field === 'referralCode') body.referralCode = value
+    else {
+      if (!value) throw new Error(t('금액을 입력하세요.', 'Enter an amount.'))
+      const usdt = krwPerUsdt.value > 0 ? Number(value.replace(/[^\d]/g, '')) / krwPerUsdt.value : Number(value)
+      if (!Number.isFinite(usdt) || usdt < 0) throw new Error(t('0 이상 금액만 입력할 수 있습니다.', 'Only amounts of 0 or more.'))
+      body.usdt = usdt
+    }
+    await $fetch('/api/admin/users/update', { method: 'POST', body })
+    if (cell.field === 'name') u.name = value
+    else if (cell.field === 'referralCode') u.referralCode = value
+    else u.balanceUsdt = body.usdt
+    editCell.value = null
+    load(true).catch(() => {})
+  } catch (e: any) {
+    error.value = e?.data?.statusMessage || e?.message || t('저장에 실패했습니다.', 'Failed to save.')
+    editCell.value = null
+  } finally {
+    editSaving = false
+  }
+}
 // 차단 = 승인상태를 거절로. 서버가 그 회원의 로그인을 끊어서, 접속 중이면 회원 화면이 5초 안에 로그아웃된다.
 async function blockMember(u: MemberRow) {
   if (process.client && !window.confirm(t(`${u.username} 회원을 차단할까요? (승인상태가 거절로 바뀌고, 접속 중이면 5초 안에 로그아웃됩니다)`, `Block ${u.username}? (Approval becomes rejected; if online they are logged out within 5 seconds)`))) return
