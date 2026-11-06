@@ -1,13 +1,15 @@
 <template>
-  <div class="space-y-5">
+  <!-- 회원목록과 같은 표 디자인: 표 폭에 맞춘 한 덩어리를 화면 가운데에 -->
+  <div class="lg:mx-[calc(24px_-_21.42857%)]">
+  <div class="mx-auto w-fit max-w-full space-y-3">
     <div class="flex items-end justify-between gap-3">
       <div>
-        <h1 class="text-xl font-semibold">{{ t('거래 내역', 'Trade History') }}</h1>
-        <p class="mt-1 text-sm text-slate-400">{{ t('포지션 매매(청산) 거래내역입니다.', 'History of position trades (closed).') }}</p>
+        <h1 class="text-base font-semibold text-slate-100">{{ t('거래 내역', 'Trade History') }}</h1>
+        <p class="text-[12px] text-slate-500">{{ t('포지션 매매(청산) 거래내역입니다.', 'History of position trades (closed).') }}</p>
       </div>
       <div class="flex items-center gap-2">
-        <NuxtLink to="/admin" class="rounded-md bg-white/10 px-3 py-2 text-sm hover:bg-white/15">{{ t('대시보드', 'Dashboard') }}</NuxtLink>
-        <button class="rounded-md bg-cyan-500/15 px-3 py-2 text-sm text-cyan-100 hover:bg-cyan-500/20" @click="load(true)">
+        <NuxtLink to="/admin" class="border border-white/20 bg-white/[0.06] px-3 py-1 text-[13px] hover:bg-white/10">{{ t('대시보드', 'Dashboard') }}</NuxtLink>
+        <button class="border border-cyan-400/40 bg-cyan-500/10 px-3 py-1 text-[13px] text-cyan-100 hover:bg-cyan-500/20" @click="load(true)">
           {{ t('새로고침', 'Refresh') }}
         </button>
       </div>
@@ -16,26 +18,26 @@
     <AdminWeeklySettlementSummary />
 
     <div class="space-y-4">
-      <div class="grid gap-2 md:grid-cols-[360px_180px_minmax(240px,1fr)_120px_160px]">
-        <div class="flex items-center gap-2 rounded-md border border-[#173753] bg-[#041425] px-3 py-2 text-sm text-slate-200">
+      <div class="flex flex-wrap items-center gap-2">
+        <div class="flex items-center gap-2 border border-white/15 bg-[#06101b] px-2 py-1 text-[13px] text-slate-200">
           <AdminDateInput v-model="fromDate" class="w-full" />
           <span class="text-slate-500">~</span>
           <AdminDateInput v-model="toDate" class="w-full" />
         </div>
         <input
           v-model.trim="memberKeyword"
-          class="rounded-md border border-[#173753] bg-[#041425] px-3 py-2 text-sm text-slate-200 outline-none placeholder:text-slate-500"
+          class="border border-white/15 bg-[#06101b] px-2 py-1 text-[13px] text-slate-200 outline-none placeholder:text-slate-500 focus:border-cyan-400"
           :placeholder="t('회원 아이디/이름', 'Username/Name')"
           :key="`trades-member-search-${locale}`"
         />
         <input
           v-model.trim="keyword"
-          class="rounded-md border border-[#173753] bg-[#041425] px-3 py-2 text-sm text-slate-200 outline-none placeholder:text-slate-500"
+          class="border border-white/15 bg-[#06101b] px-2 py-1 text-[13px] text-slate-200 outline-none placeholder:text-slate-500 focus:border-cyan-400"
           :placeholder="t('검색어를 입력하세요', 'Enter a search term')"
           :key="`trades-search-${locale}`"
         />
-        <button class="rounded-md bg-white/10 px-3 py-2 text-sm text-slate-200 hover:bg-white/15" @click="load(true)">{{ t('검색', 'Search') }}</button>
-        <div class="flex items-center gap-2 rounded-md border border-[#173753] bg-[#041425] px-3 py-2 text-sm text-slate-200">
+        <button class="border border-white/20 bg-white/[0.06] px-3 py-1 text-[13px] hover:bg-white/10 text-slate-200" @click="load(true)">{{ t('검색', 'Search') }}</button>
+        <div class="flex items-center gap-2 border border-white/15 bg-[#06101b] px-2 py-1 text-[13px] text-slate-200">
           <span class="whitespace-nowrap text-slate-400">{{ t('표시수', 'Rows') }}</span>
           <input
             v-model.number="pageSizeInput"
@@ -48,37 +50,37 @@
       </div>
 
       <div class="overflow-x-auto">
-        <table class="w-full text-[14px] text-slate-200">
-          <thead class="border-b border-[#12314a] text-[13px] text-slate-400">
+        <table class="mx-auto w-auto border-collapse text-[15px] text-slate-200">
+          <thead class="bg-white/[0.04] text-slate-400">
             <tr>
-              <th class="px-[10px] py-3 text-left">{{ t('날짜', 'Date') }}</th>
-              <th class="px-[10px] py-3 text-left">{{ t('회원 아이디', 'Username') }}</th>
-              <th class="px-[10px] py-3 text-left">{{ t('회원 이름', 'Name') }}</th>
-              <th class="px-[10px] py-3 text-left">{{ t('총판 이름', 'Affiliate') }}</th>
-              <th class="px-[10px] py-3 text-left">{{ t('심볼', 'Symbol') }}</th>
-              <th class="px-[10px] py-3 text-left">{{ t('구분', 'Result') }}</th>
-              <th class="px-[10px] py-3 text-right">{{ t('레버리지', 'Leverage') }}</th>
-              <th class="px-[10px] py-3 text-right">{{ t('체결가격', 'Fill Price') }}</th>
-              <th class="px-[10px] py-3 text-right">{{ t('체결량', 'Fill Qty') }}</th>
-              <th class="px-[10px] py-3 text-right">{{ t('실현손익', 'Realized PnL') }}</th>
-              <th class="px-[10px] py-3 text-right">{{ t('수수료', 'Fee') }}</th>
+              <th class="border border-white/10 px-2 py-1 text-left font-normal">{{ t('날짜', 'Date') }}</th>
+              <th class="border border-white/10 px-2 py-1 text-left font-normal">{{ t('회원 아이디', 'Username') }}</th>
+              <th class="border border-white/10 px-2 py-1 text-left font-normal">{{ t('회원 이름', 'Name') }}</th>
+              <th class="border border-white/10 px-2 py-1 text-left font-normal">{{ t('총판 이름', 'Affiliate') }}</th>
+              <th class="border border-white/10 px-2 py-1 text-left font-normal">{{ t('심볼', 'Symbol') }}</th>
+              <th class="border border-white/10 px-2 py-1 text-left font-normal">{{ t('구분', 'Result') }}</th>
+              <th class="border border-white/10 px-2 py-1 text-right font-normal">{{ t('레버리지', 'Leverage') }}</th>
+              <th class="border border-white/10 px-2 py-1 text-right font-normal">{{ t('체결가격', 'Fill Price') }}</th>
+              <th class="border border-white/10 px-2 py-1 text-right font-normal">{{ t('체결량', 'Fill Qty') }}</th>
+              <th class="border border-white/10 px-2 py-1 text-right font-normal">{{ t('실현손익', 'Realized PnL') }}</th>
+              <th class="border border-white/10 px-2 py-1 text-right font-normal">{{ t('수수료', 'Fee') }}</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-if="!loading && filtered.length === 0" class="border-b border-[#0d2438]">
-              <td colspan="11" class="px-[10px] py-8 text-center text-slate-500">{{ t('거래 내역이 없습니다.', 'No trade history available.') }}</td>
+            <tr v-if="!loading && filtered.length === 0" class="">
+              <td colspan="11" class="border border-white/10 px-2 py-6 text-center text-slate-500">{{ t('거래 내역이 없습니다.', 'No trade history available.') }}</td>
             </tr>
-            <tr v-for="t in paged" :key="t.id" class="border-b border-[#0d2438] hover:bg-white/[0.02]">
-              <td class="px-[10px] py-3 font-data text-slate-300">{{ formatDateTime(t.created_at) }}</td>
-              <td class="px-[10px] py-3 font-data text-slate-100">
+            <tr v-for="t in paged" :key="t.id" class="hover:bg-white/[0.03]">
+              <td class="border border-white/10 px-2 py-1 font-data text-slate-300">{{ formatDateTime(t.created_at) }}</td>
+              <td class="border border-white/10 px-2 py-1 font-data text-slate-100">
                 <button type="button" class="underline-offset-4 hover:text-cyan-300 hover:underline" @click="memberInfoModal?.open(t.username)">
                   {{ t.username }}
                 </button>
               </td>
-              <td class="px-[10px] py-3 text-slate-200">{{ t.name }}</td>
-              <td class="px-[10px] py-3 text-slate-300">{{ t.affiliateName }}</td>
-              <td class="px-[10px] py-3 font-semibold text-slate-100">{{ t.symbol }}</td>
-              <td class="px-[10px] py-3">
+              <td class="border border-white/10 px-2 py-1 text-slate-200">{{ t.name }}</td>
+              <td class="border border-white/10 px-2 py-1 text-slate-300">{{ t.affiliateName }}</td>
+              <td class="border border-white/10 px-2 py-1 font-semibold text-slate-100">{{ t.symbol }}</td>
+              <td class="border border-white/10 px-2 py-1">
                 <span
                   class="rounded px-2 py-1 text-[12px] font-semibold ring-1"
                   :class="tradeResultBadgeClass(t)"
@@ -86,13 +88,13 @@
                   {{ tradeResultLabel(t) }}
                 </span>
               </td>
-              <td class="px-[10px] py-3 text-right font-data text-slate-300">x{{ t.leverage }}</td>
-              <td class="px-[10px] py-3 text-right font-data text-slate-200">{{ fmtPrice(t.price) }}</td>
-              <td class="px-[10px] py-3 text-right font-data text-slate-200">{{ fmt2(t.qty) }}</td>
-              <td class="px-[10px] py-3 text-right font-data-plain" :class="t.pnl >= 0 ? 'text-blue-400' : 'text-red-500'">
+              <td class="border border-white/10 px-2 py-1 text-right font-data text-slate-300">x{{ t.leverage }}</td>
+              <td class="border border-white/10 px-2 py-1 text-right font-data text-slate-200">{{ fmtPrice(t.price) }}</td>
+              <td class="border border-white/10 px-2 py-1 text-right font-data text-slate-200">{{ fmt2(t.qty) }}</td>
+              <td class="border border-white/10 px-2 py-1 text-right font-data-plain" :class="t.pnl >= 0 ? 'text-blue-400' : 'text-red-500'">
                 {{ t.pnl >= 0 ? '+' : '' }}{{ fmt2(t.pnl) }}
               </td>
-              <td class="px-[10px] py-3 text-right font-data text-slate-300">{{ fmt2(t.fee) }}</td>
+              <td class="border border-white/10 px-2 py-1 text-right font-data text-slate-300">{{ fmt2(t.fee) }}</td>
             </tr>
           </tbody>
         </table>
@@ -101,13 +103,13 @@
       <div class="flex items-center justify-between gap-3">
         <div class="text-sm text-slate-400">{{ t(`페이지 ${page} / ${totalPages} · 총 ${filtered.length}건`, `Page ${page} / ${totalPages} · ${filtered.length} total`) }}</div>
         <div class="flex items-center justify-center gap-2" v-if="totalPages > 1">
-          <button class="rounded bg-white/5 px-3 py-1.5 text-sm hover:bg-white/10 disabled:opacity-30" :disabled="page <= 1" @click="page = 1">«</button>
-          <button class="rounded bg-white/5 px-3 py-1.5 text-sm hover:bg-white/10 disabled:opacity-30" :disabled="page <= 1" @click="page--">‹</button>
+          <button class="min-w-7 border border-white/20 bg-white/[0.06] px-2 py-0.5 text-[13px] hover:bg-white/10 disabled:opacity-30" :disabled="page <= 1" @click="page = 1">«</button>
+          <button class="min-w-7 border border-white/20 bg-white/[0.06] px-2 py-0.5 text-[13px] hover:bg-white/10 disabled:opacity-30" :disabled="page <= 1" @click="page--">‹</button>
           <button
             v-for="p in pageNumbers"
             :key="`trades-page-${p}`"
-            class="min-w-9 rounded px-3 py-1.5 text-center text-sm"
-            :class="p === page ? 'bg-white/10 text-white' : 'bg-white/5 text-slate-300 hover:bg-white/10'"
+            class="min-w-7 border border-white/20 bg-white/[0.06] px-2 py-0.5 text-[13px] hover:bg-white/10 text-center"
+            :class="p === page ? '!bg-cyan-500/30 text-white' : 'text-slate-300'"
             @click="page = p"
           >
             {{ p }}
@@ -115,13 +117,13 @@
           <span v-if="showPageTail" class="px-1 text-sm text-slate-500">~</span>
           <button
             v-if="showPageTail"
-            class="min-w-9 rounded bg-white/5 px-3 py-1.5 text-center text-sm text-slate-300 hover:bg-white/10"
+            class="min-w-7 border border-white/20 bg-white/[0.06] px-2 py-0.5 text-[13px] hover:bg-white/10 text-center text-slate-300"
             @click="page = totalPages"
           >
             {{ totalPages }}
           </button>
-          <button class="rounded bg-white/5 px-3 py-1.5 text-sm hover:bg-white/10 disabled:opacity-30" :disabled="page >= totalPages" @click="page++">›</button>
-          <button class="rounded bg-white/5 px-3 py-1.5 text-sm hover:bg-white/10 disabled:opacity-30" :disabled="page >= totalPages" @click="page = totalPages">»</button>
+          <button class="min-w-7 border border-white/20 bg-white/[0.06] px-2 py-0.5 text-[13px] hover:bg-white/10 disabled:opacity-30" :disabled="page >= totalPages" @click="page++">›</button>
+          <button class="min-w-7 border border-white/20 bg-white/[0.06] px-2 py-0.5 text-[13px] hover:bg-white/10 disabled:opacity-30" :disabled="page >= totalPages" @click="page = totalPages">»</button>
         </div>
       </div>
 
@@ -129,6 +131,7 @@
     </div>
 
     <AdminMemberInfoModal ref="memberInfoModal" />
+  </div>
   </div>
 </template>
 

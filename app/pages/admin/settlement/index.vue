@@ -1,24 +1,26 @@
 <template>
-  <div class="space-y-5">
+  <!-- 회원목록과 같은 표 디자인: 표 폭에 맞춘 한 덩어리를 화면 가운데에 -->
+  <div class="lg:mx-[calc(24px_-_21.42857%)]">
+  <div class="mx-auto w-fit max-w-full space-y-3">
     <div class="flex items-end justify-between gap-3">
       <div>
-        <h1 class="text-xl font-semibold">{{ t('정산내역', 'Settlement History') }}</h1>
-        <p class="mt-1 text-sm text-slate-400">{{ t('선택한 기간의 회원별 정산금을 확인합니다.', 'View per-member settlement amounts for the selected period.') }}</p>
+        <h1 class="text-base font-semibold text-slate-100">{{ t('정산내역', 'Settlement History') }}</h1>
+        <p class="text-[12px] text-slate-500">{{ t('선택한 기간의 회원별 정산금을 확인합니다.', 'View per-member settlement amounts for the selected period.') }}</p>
       </div>
       <div class="flex items-center gap-2">
-        <NuxtLink to="/admin" class="rounded-md bg-white/10 px-3 py-2 text-sm hover:bg-white/15">{{ t('대시보드', 'Dashboard') }}</NuxtLink>
-        <button class="rounded-md bg-cyan-500/15 px-3 py-2 text-sm text-cyan-100 hover:bg-cyan-500/20" @click="load()">
+        <NuxtLink to="/admin" class="border border-white/20 bg-white/[0.06] px-3 py-1 text-[13px] hover:bg-white/10">{{ t('대시보드', 'Dashboard') }}</NuxtLink>
+        <button class="border border-cyan-400/40 bg-cyan-500/10 px-3 py-1 text-[13px] text-cyan-100 hover:bg-cyan-500/20" @click="load()">
           {{ t('새로고침', 'Refresh') }}
         </button>
       </div>
     </div>
 
-    <div class="rounded-2xl border border-[#12314a] bg-[#03101d] p-4 shadow-[0_20px_60px_rgba(0,0,0,0.25)]">
+    <div class="">
       <div class="flex flex-wrap items-center gap-3">
-        <div v-if="allowedTypes.length > 1" class="flex items-center gap-1 rounded-md border border-[#173753] bg-[#041425] p-1">
+        <div v-if="allowedTypes.length > 1" class="flex items-center gap-1">
           <button
             type="button"
-            class="rounded px-3 py-1.5 text-sm"
+            class="border border-white/20 px-3 py-1 text-[13px]"
             :class="type === 'loss' ? 'bg-cyan-500/20 text-cyan-100' : 'text-slate-300 hover:bg-white/5'"
             @click="type = 'loss'"
           >
@@ -26,7 +28,7 @@
           </button>
           <button
             type="button"
-            class="rounded px-3 py-1.5 text-sm"
+            class="border border-white/20 px-3 py-1 text-[13px]"
             :class="type === 'referral' ? 'bg-cyan-500/20 text-cyan-100' : 'text-slate-300 hover:bg-white/5'"
             @click="type = 'referral'"
           >
@@ -34,14 +36,14 @@
           </button>
         </div>
 
-        <div class="flex w-[500px] max-w-full items-center gap-2 rounded-md border border-[#173753] bg-[#041425] px-3 py-2 text-sm text-slate-200">
+        <div class="flex items-center gap-2 border border-white/15 bg-[#06101b] px-2 py-1 text-[13px] text-slate-200">
           <span class="whitespace-nowrap text-slate-400">{{ t('정산 기간', 'Period') }}</span>
           <AdminDateInput v-model="fromDate" class="w-full" />
           <span class="text-slate-600">~</span>
           <AdminDateInput v-model="toDate" class="w-full" />
         </div>
-        <button class="rounded-md bg-white/10 px-3 py-2 text-sm text-slate-200 hover:bg-white/15" @click="load()">{{ t('조회', 'Search') }}</button>
-        <button class="rounded-md bg-white/5 px-3 py-2 text-sm text-slate-300 hover:bg-white/10" @click="resetToThisWeek">{{ t('이번주', 'This Week') }}</button>
+        <button class="border border-white/20 bg-white/[0.06] px-3 py-1 text-[13px] hover:bg-white/10 text-slate-200" @click="load()">{{ t('조회', 'Search') }}</button>
+        <button class="border border-white/20 bg-white/[0.06] px-3 py-1 text-[13px] hover:bg-white/10 text-slate-300" @click="resetToThisWeek">{{ t('이번주', 'This Week') }}</button>
       </div>
 
       <!-- 입출금 내역과 같은 한 줄 요약 -->
@@ -57,7 +59,7 @@
         <input
           v-model.trim="keyword"
           :placeholder="t('아이디/이름 검색', 'Search by username/name')"
-          class="w-64 rounded-md border border-[#173753] bg-[#041425] px-3 py-2 text-sm text-slate-200 outline-none placeholder:text-slate-600"
+          class="w-64 border border-white/15 bg-[#06101b] px-2 py-1 text-[13px] text-slate-200 outline-none placeholder:text-slate-600 focus:border-cyan-400"
           :key="`settlement-search-${locale}`"
         />
         <div class="flex items-center gap-2">
@@ -67,43 +69,43 @@
             type="number"
             min="1"
             max="500"
-            class="w-16 rounded-md border border-[#173753] bg-[#041425] px-2 py-1.5 text-right outline-none"
+            class="w-16 border border-white/15 bg-[#06101b] px-2 py-1 text-[13px] text-right outline-none"
           />
           <span class="text-slate-500">{{ t(`명씩 · 총 ${filteredItems.length}명`, `each · ${filteredItems.length} total`) }}</span>
         </div>
       </div>
 
       <div class="mt-2 overflow-x-auto">
-        <table class="min-w-full text-xs text-slate-200">
-          <thead class="border-b border-[#12314a] text-[12px] text-slate-400">
+        <table class="mx-auto w-auto border-collapse text-[15px] text-slate-200">
+          <thead class="bg-white/[0.04] text-slate-400">
             <tr>
-              <th class="sortable-th cursor-pointer select-none whitespace-nowrap px-[10px] py-3 text-left" @click="toggleSort('username')">{{ t('회원 아이디', 'Username') }}<span class="sort-icon">{{ sortArrow('username') || ' ⇅' }}</span></th>
-              <th class="sortable-th cursor-pointer select-none whitespace-nowrap px-[10px] py-3 text-left" @click="toggleSort('name')">{{ t('이름', 'Name') }}<span class="sort-icon">{{ sortArrow('name') || ' ⇅' }}</span></th>
-              <th class="sortable-th cursor-pointer select-none whitespace-nowrap px-[10px] py-3 text-right" @click="toggleSort('balanceUsdt')">{{ t('잔액', 'Balance') }}<span class="sort-icon">{{ sortArrow('balanceUsdt') || ' ⇅' }}</span></th>
-              <th class="sortable-th cursor-pointer select-none whitespace-nowrap px-[10px] py-3 text-right" @click="toggleSort('baseAmount')">{{ baseAmountLabel }}<span class="sort-icon">{{ sortArrow('baseAmount') || ' ⇅' }}</span></th>
-              <th class="sortable-th cursor-pointer select-none whitespace-nowrap px-[10px] py-3 text-right" @click="toggleSort('settlementAmount')">{{ t('정산금', 'Settlement') }}<span class="sort-icon">{{ sortArrow('settlementAmount') || ' ⇅' }}</span></th>
+              <th class="border border-white/10 px-2 py-1 sortable-th cursor-pointer select-none whitespace-nowrap text-left font-normal" @click="toggleSort('username')">{{ t('회원 아이디', 'Username') }}<span class="sort-icon">{{ sortArrow('username') || ' ⇅' }}</span></th>
+              <th class="border border-white/10 px-2 py-1 sortable-th cursor-pointer select-none whitespace-nowrap text-left font-normal" @click="toggleSort('name')">{{ t('이름', 'Name') }}<span class="sort-icon">{{ sortArrow('name') || ' ⇅' }}</span></th>
+              <th class="border border-white/10 px-2 py-1 sortable-th cursor-pointer select-none whitespace-nowrap text-right font-normal" @click="toggleSort('balanceUsdt')">{{ t('잔액', 'Balance') }}<span class="sort-icon">{{ sortArrow('balanceUsdt') || ' ⇅' }}</span></th>
+              <th class="border border-white/10 px-2 py-1 sortable-th cursor-pointer select-none whitespace-nowrap text-right font-normal" @click="toggleSort('baseAmount')">{{ baseAmountLabel }}<span class="sort-icon">{{ sortArrow('baseAmount') || ' ⇅' }}</span></th>
+              <th class="border border-white/10 px-2 py-1 sortable-th cursor-pointer select-none whitespace-nowrap text-right font-normal" @click="toggleSort('settlementAmount')">{{ t('정산금', 'Settlement') }}<span class="sort-icon">{{ sortArrow('settlementAmount') || ' ⇅' }}</span></th>
             </tr>
           </thead>
           <tbody>
-            <tr v-if="!loading && pagedItems.length === 0" class="border-b border-[#0d2438]">
-              <td colspan="5" class="px-[10px] py-8 text-center text-slate-500">{{ t('데이터가 없습니다.', 'No data available.') }}</td>
+            <tr v-if="!loading && pagedItems.length === 0" class="">
+              <td colspan="5" class="border border-white/10 px-2 py-6 text-center text-slate-500">{{ t('데이터가 없습니다.', 'No data available.') }}</td>
             </tr>
-            <tr v-for="it in pagedItems" :key="it.id" class="border-b border-[#0d2438] hover:bg-white/[0.02]">
-              <td class="px-[10px] py-3 font-data text-slate-100">
+            <tr v-for="it in pagedItems" :key="it.id" class="hover:bg-white/[0.03]">
+              <td class="border border-white/10 px-2 py-1 font-data text-slate-100">
                 <button type="button" class="underline-offset-4 hover:text-cyan-300 hover:underline" @click="memberInfoModal?.open(it.username)">
                   {{ it.username }}
                 </button>
               </td>
-              <td class="px-[10px] py-3 text-slate-200">{{ it.name }}</td>
-              <td class="px-[10px] py-3 text-right font-data text-slate-200">
+              <td class="border border-white/10 px-2 py-1 text-slate-200">{{ it.name }}</td>
+              <td class="border border-white/10 px-2 py-1 text-right font-data text-slate-200">
                 <div>{{ fmtKrw(it.balanceUsdt) }}</div>
                 <div class="text-slate-500">({{ fmt2(it.balanceUsdt) }})</div>
               </td>
-              <td class="px-[10px] py-3 text-right font-data text-slate-300">
+              <td class="border border-white/10 px-2 py-1 text-right font-data text-slate-300">
                 <div>{{ fmtKrw(it.baseAmount) }}</div>
                 <div class="text-slate-500">({{ fmt2(it.baseAmount) }})</div>
               </td>
-              <td class="px-[10px] py-3 text-right font-data text-slate-100">
+              <td class="border border-white/10 px-2 py-1 text-right font-data text-slate-100">
                 <div>{{ fmtKrw(it.settlementAmount) }}</div>
                 <div class="text-slate-500">({{ fmt2(it.settlementAmount) }})</div>
               </td>
@@ -115,13 +117,13 @@
       <div class="mt-4 flex items-center justify-between gap-3">
         <div class="text-sm text-slate-400">{{ t(`페이지 ${page} / ${totalPages}`, `Page ${page} / ${totalPages}`) }}</div>
         <div class="flex items-center justify-center gap-2" v-if="totalPages > 1">
-          <button class="rounded bg-white/5 px-3 py-1.5 text-sm hover:bg-white/10 disabled:opacity-30" :disabled="page <= 1" @click="page = 1">«</button>
-          <button class="rounded bg-white/5 px-3 py-1.5 text-sm hover:bg-white/10 disabled:opacity-30" :disabled="page <= 1" @click="page--">‹</button>
+          <button class="min-w-7 border border-white/20 bg-white/[0.06] px-2 py-0.5 text-[13px] hover:bg-white/10 disabled:opacity-30" :disabled="page <= 1" @click="page = 1">«</button>
+          <button class="min-w-7 border border-white/20 bg-white/[0.06] px-2 py-0.5 text-[13px] hover:bg-white/10 disabled:opacity-30" :disabled="page <= 1" @click="page--">‹</button>
           <button
             v-for="p in pageNumbers"
             :key="`settlement-page-${p}`"
-            class="min-w-9 rounded px-3 py-1.5 text-center text-sm"
-            :class="p === page ? 'bg-white/10 text-white' : 'bg-white/5 text-slate-300 hover:bg-white/10'"
+            class="min-w-7 border border-white/20 bg-white/[0.06] px-2 py-0.5 text-[13px] hover:bg-white/10 text-center"
+            :class="p === page ? '!bg-cyan-500/30 text-white' : 'text-slate-300'"
             @click="page = p"
           >
             {{ p }}
@@ -129,13 +131,13 @@
           <span v-if="showPageTail" class="px-1 text-sm text-slate-500">~</span>
           <button
             v-if="showPageTail"
-            class="min-w-9 rounded bg-white/5 px-3 py-1.5 text-center text-sm text-slate-300 hover:bg-white/10"
+            class="min-w-7 border border-white/20 bg-white/[0.06] px-2 py-0.5 text-[13px] hover:bg-white/10 text-center text-slate-300"
             @click="page = totalPages"
           >
             {{ totalPages }}
           </button>
-          <button class="rounded bg-white/5 px-3 py-1.5 text-sm hover:bg-white/10 disabled:opacity-30" :disabled="page >= totalPages" @click="page++">›</button>
-          <button class="rounded bg-white/5 px-3 py-1.5 text-sm hover:bg-white/10 disabled:opacity-30" :disabled="page >= totalPages" @click="page = totalPages">»</button>
+          <button class="min-w-7 border border-white/20 bg-white/[0.06] px-2 py-0.5 text-[13px] hover:bg-white/10 disabled:opacity-30" :disabled="page >= totalPages" @click="page++">›</button>
+          <button class="min-w-7 border border-white/20 bg-white/[0.06] px-2 py-0.5 text-[13px] hover:bg-white/10 disabled:opacity-30" :disabled="page >= totalPages" @click="page = totalPages">»</button>
         </div>
       </div>
 
@@ -143,6 +145,7 @@
     </div>
 
     <AdminMemberInfoModal ref="memberInfoModal" />
+  </div>
   </div>
 </template>
 
