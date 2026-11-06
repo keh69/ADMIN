@@ -19,7 +19,7 @@
       <div class="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 class="text-lg font-semibold">{{ t('유저 관리', 'User Management') }}</h2>
-          <p class="mt-1 text-sm text-slate-400">{{ t('아이디/이름/USDT잔액/추천코드/역할/정산유형/정산비율을 수정하면 바로 반영됩니다.', 'Changes to username/name/USDT balance/referral code/role/settlement type/settlement rate apply immediately.') }}</p>
+          <p class="mt-1 text-sm text-slate-400">{{ t('아이디/이름/잔액(원)/추천코드/역할/정산유형/정산비율을 수정하면 바로 반영됩니다. 잔액은 원화로 입력하면 현재 환율로 USDT로 바꿔 저장합니다.', 'Changes to username/name/balance (KRW)/referral code/role/settlement type/settlement rate apply immediately. Balance is entered in KRW and saved as USDT at the current rate.') }}</p>
         </div>
         <div class="flex items-center gap-2">
           <div class="rounded-xl border border-cyan-500/20 bg-cyan-500/10 px-4 py-2 text-sm text-cyan-100">
@@ -70,43 +70,44 @@
           <table class="w-full text-sm">
             <thead class="border-b border-[#12314a] text-[12px] text-slate-500">
               <tr>
-                <th class="sortable-th cursor-pointer select-none whitespace-nowrap px-[10px] py-3 text-left" @click="toggleSort('username')">{{ t('아이디', 'Username') }}<span class="sort-icon">{{ sortArrow('username') || ' ⇅' }}</span></th>
-                <th class="sortable-th cursor-pointer select-none whitespace-nowrap px-[10px] py-3 text-left" @click="toggleSort('name')">{{ t('이름', 'Name') }}<span class="sort-icon">{{ sortArrow('name') || ' ⇅' }}</span></th>
-                <th class="whitespace-nowrap px-[10px] py-3 text-left">{{ t('계좌정보', 'Bank Account') }}</th>
-                <th class="sortable-th cursor-pointer select-none whitespace-nowrap px-[10px] py-3 text-left" @click="toggleSort('usdt')">{{ t('USDT잔액', 'USDT Balance') }}<span class="sort-icon">{{ sortArrow('usdt') || ' ⇅' }}</span></th>
-                <th class="sortable-th cursor-pointer select-none whitespace-nowrap px-[10px] py-3 text-left" @click="toggleSort('referralCode')">{{ t('추천코드', 'Referral Code') }}<span class="sort-icon">{{ sortArrow('referralCode') || ' ⇅' }}</span></th>
-                <th class="sortable-th cursor-pointer select-none whitespace-nowrap px-[10px] py-3 text-left" @click="toggleSort('role')">{{ t('역할', 'Role') }}<span class="sort-icon">{{ sortArrow('role') || ' ⇅' }}</span></th>
-                <th class="whitespace-nowrap px-[10px] py-3 text-left">{{ t('정산유형', 'Settlement Type') }}</th>
-                <th class="sortable-th cursor-pointer select-none whitespace-nowrap px-[10px] py-3 text-left" @click="toggleSort('created_at')">{{ t('가입일', 'Joined') }}<span class="sort-icon">{{ sortArrow('created_at') || ' ⇅' }}</span></th>
-                <th class="sortable-th cursor-pointer select-none whitespace-nowrap px-[10px] py-3 text-left" @click="toggleSort('last_login')">{{ t('최근 접속일', 'Last Login') }}<span class="sort-icon">{{ sortArrow('last_login') || ' ⇅' }}</span></th>
-                <th class="whitespace-nowrap px-[10px] py-3 text-center">{{ t('하부보기', 'Downline') }}</th>
-                <th class="whitespace-nowrap px-[10px] py-3 text-center">{{ t('비밀번호', 'Password') }}</th>
-                <th class="whitespace-nowrap px-[10px] py-3 text-center">{{ t('로그인', 'Login') }}</th>
-                <th class="whitespace-nowrap px-[10px] py-3 text-center">{{ t('삭제', 'Delete') }}</th>
+                <th class="sortable-th cursor-pointer select-none whitespace-nowrap px-2 py-3 text-left" @click="toggleSort('username')">{{ t('아이디', 'Username') }}<span class="sort-icon">{{ sortArrow('username') || ' ⇅' }}</span></th>
+                <th class="sortable-th cursor-pointer select-none whitespace-nowrap px-2 py-3 text-left" @click="toggleSort('name')">{{ t('이름', 'Name') }}<span class="sort-icon">{{ sortArrow('name') || ' ⇅' }}</span></th>
+                <th class="whitespace-nowrap px-2 py-3 text-left">{{ t('계좌정보', 'Bank Account') }}</th>
+                <th class="sortable-th cursor-pointer select-none whitespace-nowrap px-2 py-3 text-left" @click="toggleSort('usdt')">{{ t('잔액(원)', 'Balance (KRW)') }}<span class="sort-icon">{{ sortArrow('usdt') || ' ⇅' }}</span></th>
+                <th class="sortable-th cursor-pointer select-none whitespace-nowrap px-2 py-3 text-left" @click="toggleSort('referralCode')">{{ t('추천코드', 'Referral Code') }}<span class="sort-icon">{{ sortArrow('referralCode') || ' ⇅' }}</span></th>
+                <th class="sortable-th cursor-pointer select-none whitespace-nowrap px-2 py-3 text-left" @click="toggleSort('topCode')">{{ t('최상위코드', 'Top Code') }}<span class="sort-icon">{{ sortArrow('topCode') || ' ⇅' }}</span></th>
+                <th class="sortable-th cursor-pointer select-none whitespace-nowrap px-2 py-3 text-left" @click="toggleSort('role')">{{ t('역할', 'Role') }}<span class="sort-icon">{{ sortArrow('role') || ' ⇅' }}</span></th>
+                <th class="whitespace-nowrap px-2 py-3 text-left">{{ t('정산유형', 'Settlement Type') }}</th>
+                <th class="sortable-th cursor-pointer select-none whitespace-nowrap px-2 py-3 text-left" @click="toggleSort('created_at')">{{ t('가입일', 'Joined') }}<span class="sort-icon">{{ sortArrow('created_at') || ' ⇅' }}</span></th>
+                <th class="sortable-th cursor-pointer select-none whitespace-nowrap px-2 py-3 text-left" @click="toggleSort('last_login')">{{ t('최근 접속일', 'Last Login') }}<span class="sort-icon">{{ sortArrow('last_login') || ' ⇅' }}</span></th>
+                <th class="whitespace-nowrap px-2 py-3 text-center">{{ t('하부보기', 'Downline') }}</th>
+                <th class="whitespace-nowrap px-2 py-3 text-center">{{ t('비밀번호', 'Password') }}</th>
+                <th class="whitespace-nowrap px-2 py-3 text-center">{{ t('로그인', 'Login') }}</th>
+                <th class="whitespace-nowrap px-2 py-3 text-center">{{ t('삭제', 'Delete') }}</th>
               </tr>
             </thead>
             <tbody>
               <tr v-for="u in pagedUsers" :key="u.id" class="border-b border-[#0d2438] hover:bg-white/[0.02]">
                 <template v-if="userDraft[u.id]">
-                  <td class="px-[10px] py-2.5">
+                  <td class="px-2 py-2.5">
                     <input
                       v-model.trim="userDraft[u.id].username"
-                      :disabled="isLockedUser(u)"
-                      class="w-28 rounded-md border border-[#173753] bg-[#041425] px-2.5 py-1.5 text-sm text-slate-200 outline-none transition focus:border-indigo-400/60 disabled:cursor-not-allowed disabled:opacity-50"
-                      @blur="saveUserRow(u.id)"
-                      @keyup.enter="saveUserRow(u.id)"
-                    />
-                  </td>
-                  <td class="px-[10px] py-2.5">
-                    <input
-                      v-model.trim="userDraft[u.id].name"
                       :disabled="isLockedUser(u)"
                       class="w-24 rounded-md border border-[#173753] bg-[#041425] px-2.5 py-1.5 text-sm text-slate-200 outline-none transition focus:border-indigo-400/60 disabled:cursor-not-allowed disabled:opacity-50"
                       @blur="saveUserRow(u.id)"
                       @keyup.enter="saveUserRow(u.id)"
                     />
                   </td>
-                  <td class="px-[10px] py-2.5">
+                  <td class="px-2 py-2.5">
+                    <input
+                      v-model.trim="userDraft[u.id].name"
+                      :disabled="isLockedUser(u)"
+                      class="w-20 rounded-md border border-[#173753] bg-[#041425] px-2.5 py-1.5 text-sm text-slate-200 outline-none transition focus:border-indigo-400/60 disabled:cursor-not-allowed disabled:opacity-50"
+                      @blur="saveUserRow(u.id)"
+                      @keyup.enter="saveUserRow(u.id)"
+                    />
+                  </td>
+                  <td class="px-2 py-2.5">
                     <button
                       class="whitespace-nowrap rounded-md bg-white/10 px-3 py-1.5 text-sm hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-50"
                       :disabled="isLockedUser(u)"
@@ -115,8 +116,20 @@
                       {{ t('계좌정보', 'Bank Account') }}
                     </button>
                   </td>
-                  <td class="px-[10px] py-2.5">
+                  <td class="px-2 py-2.5">
                     <input
+                      v-if="userKrwRate > 0"
+                      :value="userDraft[u.id].krw"
+                      type="text"
+                      inputmode="numeric"
+                      :title="`≈ ${(Number(userDraft[u.id].usdt) || 0).toFixed(2)} USDT`"
+                      class="w-32 rounded-md border border-[#173753] bg-[#041425] px-2.5 py-1.5 text-right text-sm text-slate-200 outline-none transition focus:border-indigo-400/60 disabled:cursor-not-allowed disabled:opacity-50"
+                      @input="onUserKrwInput(u.id, $event)"
+                      @blur="saveUserRow(u.id)"
+                      @keyup.enter="saveUserRow(u.id)"
+                    />
+                    <input
+                      v-else
                       v-model.number="userDraft[u.id].usdt"
                       type="number"
                       min="0"
@@ -126,28 +139,29 @@
                       @keyup.enter="saveUserRow(u.id)"
                     />
                   </td>
-                  <td class="px-[10px] py-2.5">
+                  <td class="px-2 py-2.5">
                     <input
                       v-model.trim="userDraft[u.id].referralCode"
                       :disabled="isLockedUser(u)"
-                      class="w-28 rounded-md border border-[#173753] bg-[#041425] px-2.5 py-1.5 text-sm text-slate-200 outline-none transition focus:border-indigo-400/60 disabled:cursor-not-allowed disabled:opacity-50"
+                      class="w-24 rounded-md border border-[#173753] bg-[#041425] px-2.5 py-1.5 text-sm text-slate-200 outline-none transition focus:border-indigo-400/60 disabled:cursor-not-allowed disabled:opacity-50"
                       @blur="saveUserRow(u.id)"
                       @keyup.enter="saveUserRow(u.id)"
                     />
                   </td>
-                  <td class="px-[10px] py-2.5">
+                  <td class="whitespace-nowrap px-2 py-2.5 text-slate-200">{{ u.topCode || '—' }}</td>
+                  <td class="px-2 py-2.5">
                     <select
                       v-model="userDraft[u.id].role"
                       :disabled="isLockedUser(u)"
-                      class="w-40 rounded-md border border-[#173753] bg-[#041425] px-2.5 py-1.5 text-sm text-slate-200 outline-none transition focus:border-indigo-400/60 disabled:cursor-not-allowed disabled:opacity-50"
+                      class="w-28 rounded-md border border-[#173753] bg-[#041425] px-2.5 py-1.5 text-sm text-slate-200 outline-none transition focus:border-indigo-400/60 disabled:cursor-not-allowed disabled:opacity-50"
                       @change="saveUserRow(u.id)"
                     >
-                      <option value="user">{{ t('회원', 'Member') }} (user)</option>
-                      <option v-for="r in roles" :key="r.id" :value="r.id">{{ r.label }} ({{ r.id }})</option>
-                      <option value="super_admin">{{ t('최고관리자', 'Super Admin') }} (super_admin)</option>
+                      <option value="user">{{ t('회원', 'Member') }}</option>
+                      <option v-for="r in roles" :key="r.id" :value="r.id">{{ r.label }}</option>
+                      <option value="super_admin">{{ t('최고관리자', 'Super Admin') }}</option>
                     </select>
                   </td>
-                  <td class="px-[10px] py-2.5">
+                  <td class="px-2 py-2.5">
                     <div v-if="u.role !== 'user' && u.role !== 'super_admin'" class="flex items-center gap-1.5">
                       <select
                         v-model="userDraft[u.id].settlementType"
@@ -174,9 +188,9 @@
                     </div>
                     <span v-else class="text-xs text-slate-600">—</span>
                   </td>
-                  <td class="whitespace-nowrap px-[10px] py-2.5 font-data text-slate-300">{{ dateOnly(u.created_at) }}</td>
-                  <td class="whitespace-nowrap px-[10px] py-2.5 font-data text-slate-300">{{ u.last_login ? dateOnly(u.last_login) : '—' }}</td>
-                  <td class="px-[10px] py-2.5 text-center">
+                  <td class="whitespace-nowrap px-2 py-2.5 font-data text-slate-300">{{ dateOnly(u.created_at) }}</td>
+                  <td class="whitespace-nowrap px-2 py-2.5 font-data text-slate-300">{{ u.last_login ? dateOnly(u.last_login) : '—' }}</td>
+                  <td class="px-2 py-2.5 text-center">
                     <button
                       class="whitespace-nowrap rounded-md bg-white/10 px-3 py-1.5 text-sm hover:bg-white/15"
                       @click="referralFilter = u.username"
@@ -184,7 +198,7 @@
                       {{ t('하부보기', 'Downline') }}
                     </button>
                   </td>
-                  <td class="px-[10px] py-2.5 text-center">
+                  <td class="px-2 py-2.5 text-center">
                     <button
                       class="whitespace-nowrap rounded-md bg-amber-500/15 px-3 py-1.5 text-sm text-amber-200 ring-1 ring-amber-400/30 hover:bg-amber-500/25 disabled:cursor-not-allowed disabled:opacity-50"
                       :disabled="userResetting === u.id || isLockedUser(u)"
@@ -193,7 +207,7 @@
                       {{ t('초기화', 'Reset') }}
                     </button>
                   </td>
-                  <td class="px-[10px] py-2.5 text-center">
+                  <td class="px-2 py-2.5 text-center">
                     <button
                       class="whitespace-nowrap rounded-md bg-emerald-500/15 px-3 py-1.5 text-sm text-emerald-200 ring-1 ring-emerald-400/30 hover:bg-emerald-500/25 disabled:cursor-not-allowed disabled:opacity-50"
                       :disabled="loggingInAs === u.id"
@@ -202,7 +216,7 @@
                       {{ t('로그인', 'Login') }}
                     </button>
                   </td>
-                  <td class="px-[10px] py-2.5 text-center">
+                  <td class="px-2 py-2.5 text-center">
                     <button
                       class="whitespace-nowrap rounded-md bg-rose-500/15 px-3 py-1.5 text-sm text-rose-200 ring-1 ring-rose-400/30 hover:bg-rose-500/25 disabled:cursor-not-allowed disabled:opacity-50"
                       :disabled="isLockedUser(u) || u.id === me?.id"
@@ -1602,11 +1616,16 @@ type AdminUserRow = {
   last_login: string | null
   settlementType: 'loss' | 'referral'
   settlementPercent: number | null
+  // 추천코드 체인을 끝까지 따라 올라간 가장 위 코드(화면에서 계산)
+  topCode?: string
 }
 type UserDraft = {
   username: string
   name: string
   usdt: number
+  // 잔액 원화 입력칸(쉼표 포함 글자)과 처음 값(그대로면 USDT 값을 바꾸지 않음)
+  krw: string
+  krwInitial: string
   referralCode: string
   role: string
   settlementType: 'loss' | 'referral'
@@ -1629,7 +1648,7 @@ function dateOnly(v: string) {
   return s ? s.slice(0, 10) : ''
 }
 const referralFilter = ref<string | null>(null)
-const sortKey = ref<'username' | 'name' | 'usdt' | 'referralCode' | 'role' | 'created_at' | 'last_login'>('username')
+const sortKey = ref<'username' | 'name' | 'usdt' | 'referralCode' | 'topCode' | 'role' | 'created_at' | 'last_login'>('username')
 const sortDir = ref<'asc' | 'desc'>('asc')
 const page = ref(1)
 const pageSizeInput = ref(20)
@@ -1740,10 +1759,52 @@ watch(pageSizeInput, (v) => {
   if (page.value > totalPages.value) page.value = totalPages.value
 })
 
+// 잔액은 원화로 입력받고 저장할 때 현재 환율로 USDT로 바꾼다(환율을 못 불러오면 USDT 입력칸).
+const userKrwRate = ref(0)
+async function loadUserKrwRate() {
+  const r = await $fetch<{ rate: number }>('/api/settings/krw-rate').catch(() => null)
+  userKrwRate.value = Number(r?.rate || 0)
+}
+function krwTextOf(usdt: number) {
+  return userKrwRate.value > 0 ? Math.round((Number(usdt) || 0) * userKrwRate.value).toLocaleString('ko-KR') : ''
+}
+function onUserKrwInput(userId: number, e: Event) {
+  const el = e.target as HTMLInputElement
+  const d = userDraft[userId]
+  if (!d) return
+  const digits = el.value.replace(/[^\d]/g, '').replace(/^0+(?=\d)/, '')
+  d.krw = digits ? Number(digits).toLocaleString('ko-KR') : ''
+  el.value = d.krw
+}
+// 추천코드 체인을 끝까지 따라 올라가서 가장 위 코드(=최상위 총판)를 찾는다(서버 resolveTopCode와 같은 규칙).
+function computeTopCodes(list: AdminUserRow[]) {
+  const referralOf = new Map<string, string>()
+  for (const u of list) referralOf.set(u.username, String(u.referralCode || '').trim())
+  for (const u of list) {
+    let code = referralOf.get(u.username) || ''
+    const seen = new Set<string>([u.username])
+    let depth = 0
+    while (code && depth < 50) {
+      if (seen.has(code)) break
+      seen.add(code)
+      const next = referralOf.get(code)
+      if (next === undefined || !next) break
+      code = next
+      depth++
+    }
+    u.topCode = code
+  }
+}
+
 async function saveUserRow(userId: number) {
   const draft = userDraft[userId]
   if (!draft) return
   const row = users.value.find((u) => u.id === userId)
+  // 원화 칸을 고쳤으면 USDT로 환산(그대로면 기존 USDT 값 유지)
+  if (userKrwRate.value > 0 && draft.krw !== draft.krwInitial) {
+    if (!draft.krw) draft.krw = draft.krwInitial
+    else draft.usdt = Number(draft.krw.replace(/[^\d]/g, '') || 0) / userKrwRate.value
+  }
   userSaving.value = userId
   error.value = null
   msg.value = null
@@ -2226,13 +2287,17 @@ async function load() {
   error.value = null
   msg.value = null
   try {
-    const data = await $fetch<{ users: AdminUserRow[] }>('/api/admin/users')
+    const [data] = await Promise.all([$fetch<{ users: AdminUserRow[] }>('/api/admin/users'), loadUserKrwRate()])
+    computeTopCodes(data.users)
     users.value = data.users
     for (const u of users.value) {
+      const krw = krwTextOf(Number(u.usdt ?? 0))
       userDraft[u.id] = {
         username: u.username,
         name: u.name || '',
         usdt: Number(u.usdt ?? 0),
+        krw,
+        krwInitial: krw,
         referralCode: u.referralCode || '',
         role: u.role || 'user',
         settlementType: u.settlementType === 'referral' ? 'referral' : 'loss',
