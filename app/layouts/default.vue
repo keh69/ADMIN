@@ -242,10 +242,35 @@ const navEntries = computed<NavEntry[]>(() => {
     link('deposits'),
     group('futures', '선물거래', 'Futures', ['positions', 'trades']),
     link('settlement'),
-    link('messages')
+    link('messages'),
+    // 이벤트▾ (총관리자 전용): 테스트/거래소 이벤트를 각각 관리. 예) 이벤트1(테스트), 이벤트1(거래소)
+    isSuper.value
+      ? {
+          type: 'group',
+          key: 'events',
+          ko: '이벤트',
+          en: 'Events',
+          items: adminEvents.value.length
+            ? adminEvents.value.map((e) => ({ to: `/admin/events/${e.id}`, ko: e.label, en: e.label }))
+            : [{ to: '/admin/dashboard', ko: '(등록된 이벤트 없음)', en: '(no events)', noActive: true }]
+        }
+      : null
   ]
   return list.filter((e): e is NavEntry => !!e)
 })
+
+// 상단 [이벤트] 드롭다운 목록(bitduck_events: 테스트/거래소)
+const adminEvents = ref<Array<{ id: number; label: string; site: string; code: string }>>([])
+async function loadAdminEvents() {
+  if (!isSuper.value) return
+  try {
+    const res = await $fetch<{ items: Array<{ id: number; label: string; site: string; code: string }> }>('/api/admin/events')
+    adminEvents.value = res.items || []
+  } catch {
+    adminEvents.value = []
+  }
+}
+watch(isSuper, (v) => { if (v) loadAdminEvents() }, { immediate: true })
 
 function isGroupActive(entry: NavEntry) {
   return entry.type === 'group' && entry.items.some((i) => isActive(i.to))
