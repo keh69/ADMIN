@@ -1,14 +1,6 @@
 <template>
   <div class="space-y-6">
-    <div class="flex items-end justify-between gap-3">
-      <div>
-        <h1 class="text-xl font-semibold">{{ t('고객센터', 'Support') }}</h1>
-        <p class="mt-1 text-sm text-slate-400">{{ t('전체회원 또는 선택 회원에게 쪽지를 보내고 답장을 확인합니다.', 'Send messages to all or selected members and view replies.') }}</p>
-      </div>
-      <button class="rounded-md bg-white/10 px-3 py-2 text-sm hover:bg-white/15" @click="activeTab === 'guests' ? loadGuestThreads() : loadAll()">{{ t('새로고침', 'Refresh') }}</button>
-    </div>
-
-    <div class="flex gap-1 border-b border-white/10">
+    <div class="flex items-center gap-1 border-b border-white/10">
       <button
         type="button"
         class="border-b-2 px-4 py-2 text-sm font-medium transition"
@@ -34,6 +26,8 @@
       >
         {{ t('쪽지쓰기', 'Compose') }}
       </button>
+      <!-- 제목/설명 줄을 없애고 새로고침 버튼은 탭 줄 오른쪽으로 옮김 -->
+      <button class="mb-1 ml-auto rounded-md bg-white/10 px-3 py-1.5 text-sm hover:bg-white/15" @click="activeTab === 'guests' ? loadGuestThreads() : loadAll()">{{ t('새로고침', 'Refresh') }}</button>
     </div>
 
     <div v-show="activeTab === 'compose'">
