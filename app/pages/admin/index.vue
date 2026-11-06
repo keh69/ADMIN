@@ -160,7 +160,7 @@
         </div>
         <div class="flex items-center gap-3 text-[13px]">
           <span class="text-slate-400">{{ t('총 유저수', 'Total users') }} <span class="font-mono text-slate-100">{{ sortedUsers.length }}</span>{{ t('명', '') }}</span>
-          <button type="button" class="text-slate-400 hover:text-cyan-300" @click="load">↻ {{ t('새로고침', 'Refresh') }}</button>
+          <button type="button" class="border border-white/20 bg-white/[0.06] px-3 py-1 text-slate-100 hover:bg-white/10" @click="load">↻ {{ t('새로고침', 'Refresh') }}</button>
         </div>
       </div>
       <p class="text-[12px] text-slate-500">{{ t('칸을 고치고 다른 곳을 누르거나 Enter를 누르면 바로 저장됩니다. 잔액은 원화로 입력하면 현재 환율로 USDT로 바꿔 저장합니다.', 'Edit a cell and press Enter or click away to save. Balance is entered in KRW and saved as USDT at the current rate.') }}</p>
@@ -182,7 +182,7 @@
 
       <div v-if="loading" class="text-[13px] text-slate-400">{{ t('불러오는 중…', 'Loading…') }}</div>
       <div v-else class="overflow-x-auto">
-        <table class="w-full border-collapse text-[13px]">
+        <table class="mx-auto w-auto border-collapse text-[13px]">
           <thead class="bg-white/[0.04] text-left text-slate-400">
             <tr>
               <th class="w-10 whitespace-nowrap border border-white/10 px-2 py-1 text-center font-normal">#</th>
@@ -204,13 +204,13 @@
               <template v-if="userDraft[u.id]">
                 <td class="border border-white/10 px-2 py-1 text-center font-mono text-slate-500">{{ (page - 1) * pageSize + ui + 1 }}</td>
                 <td class="border border-white/10 p-0">
-                  <input v-model.trim="userDraft[u.id].username" :disabled="isLockedUser(u)" class="w-28 bg-transparent px-2 py-1 text-slate-100 outline-none focus:bg-black/40 disabled:cursor-not-allowed disabled:opacity-50 [&>option]:bg-[#0b1726]" @blur="saveUserRow(u.id)" @keyup.enter="saveUserRow(u.id)" />
+                  <input v-model.trim="userDraft[u.id].username" :disabled="isLockedUser(u)" class="w-[calc(20ch+1rem)] bg-transparent px-2 py-1 text-slate-100 outline-none focus:bg-black/40 disabled:cursor-not-allowed disabled:opacity-50 [&>option]:bg-[#0b1726]" @blur="saveUserRow(u.id)" @keyup.enter="saveUserRow(u.id)" />
                 </td>
                 <td class="border border-white/10 p-0">
-                  <input v-model.trim="userDraft[u.id].name" :disabled="isLockedUser(u)" class="w-24 bg-transparent px-2 py-1 text-slate-100 outline-none focus:bg-black/40 disabled:cursor-not-allowed disabled:opacity-50 [&>option]:bg-[#0b1726]" @blur="saveUserRow(u.id)" @keyup.enter="saveUserRow(u.id)" />
+                  <input v-model.trim="userDraft[u.id].name" :disabled="isLockedUser(u)" class="w-[calc(10em+1rem)] bg-transparent px-2 py-1 text-slate-100 outline-none focus:bg-black/40 disabled:cursor-not-allowed disabled:opacity-50 [&>option]:bg-[#0b1726]" @blur="saveUserRow(u.id)" @keyup.enter="saveUserRow(u.id)" />
                 </td>
                 <td class="border border-white/10 px-2 py-1">
-                  <button type="button" class=" disabled:opacity-40" :disabled="isLockedUser(u)" @click="openAccountModal(u)">{{ t('계좌정보', 'Bank') }}</button>
+                  <button type="button" class="border border-white/20 bg-white/[0.06] px-2 py-0.5 text-[12px] hover:bg-white/10 disabled:opacity-40" :disabled="isLockedUser(u)" @click="openAccountModal(u)">{{ t('계좌정보', 'Bank') }}</button>
                 </td>
                 <td class="border border-white/10 p-0">
                   <input
@@ -219,7 +219,7 @@
                     type="text"
                     inputmode="numeric"
                     :title="`≈ ${(Number(userDraft[u.id].usdt) || 0).toFixed(2)} USDT`"
-                    class="w-32 text-right font-mono bg-transparent px-2 py-1 text-slate-100 outline-none focus:bg-black/40 disabled:cursor-not-allowed disabled:opacity-50 [&>option]:bg-[#0b1726]"
+                    class="w-[calc(12ch+1rem)] text-right font-mono bg-transparent px-2 py-1 text-slate-100 outline-none focus:bg-black/40 disabled:cursor-not-allowed disabled:opacity-50 [&>option]:bg-[#0b1726]"
                     @input="onUserKrwInput(u.id, $event)"
                     @blur="saveUserRow(u.id)"
                     @keyup.enter="saveUserRow(u.id)"
@@ -256,20 +256,17 @@
                       @blur="saveUserRow(u.id)"
                       @keyup.enter="saveUserRow(u.id)"
                     />
-                    <span class="pr-2 text-[12px] text-slate-500">%</span>
+                    <span class="pr-1 text-[12px] text-slate-500">%</span>
                   </div>
                   <span v-else class="px-2 text-slate-600">—</span>
                 </td>
                 <td class="border border-white/10 px-2 py-1 whitespace-nowrap font-mono text-slate-400">{{ dateOnly(u.created_at) }}</td>
                 <td class="border border-white/10 px-2 py-1 whitespace-nowrap font-mono text-slate-400">{{ u.last_login ? dateOnly(u.last_login) : '—' }}</td>
                 <td class="border border-white/10 px-2 py-1 whitespace-nowrap">
-                  <button type="button" class="text-cyan-300 hover:underline" @click="referralFilter = u.username">{{ t('하부보기', 'Downline') }}</button>
-                  <span class="mx-1 text-slate-600">|</span>
-                  <button type="button" class="text-amber-300 hover:underline disabled:opacity-40" :disabled="userResetting === u.id || isLockedUser(u)" @click="resetUserPassword(u.id)">{{ t('비번초기화', 'Reset PW') }}</button>
-                  <span class="mx-1 text-slate-600">|</span>
-                  <button type="button" class="text-emerald-300 hover:underline disabled:opacity-40" :disabled="loggingInAs === u.id" @click="loginAsUser(u.id)">{{ t('로그인', 'Login') }}</button>
-                  <span class="mx-1 text-slate-600">|</span>
-                  <button type="button" class="text-rose-300 hover:underline disabled:opacity-40" :disabled="isLockedUser(u) || u.id === me?.id" @click="askDeleteUser(u)">{{ t('삭제', 'Delete') }}</button>
+                  <button type="button" class="mr-1 border border-white/20 bg-white/[0.06] px-2 py-0.5 text-[12px] hover:bg-white/10" @click="referralFilter = u.username">{{ t('하부보기', 'Downline') }}</button>
+                  <button type="button" class="mr-1 border border-white/20 bg-white/[0.06] px-2 py-0.5 text-[12px] hover:bg-white/10 text-amber-200 disabled:opacity-40" :disabled="userResetting === u.id || isLockedUser(u)" @click="resetUserPassword(u.id)">{{ t('비번초기화', 'Reset PW') }}</button>
+                  <button type="button" class="mr-1 border border-white/20 bg-white/[0.06] px-2 py-0.5 text-[12px] hover:bg-white/10 text-emerald-200 disabled:opacity-40" :disabled="loggingInAs === u.id" @click="loginAsUser(u.id)">{{ t('로그인', 'Login') }}</button>
+                  <button type="button" class="border border-white/20 bg-white/[0.06] px-2 py-0.5 text-[12px] hover:bg-white/10 text-rose-200 disabled:opacity-40" :disabled="isLockedUser(u) || u.id === me?.id" @click="askDeleteUser(u)">{{ t('삭제', 'Delete') }}</button>
                 </td>
               </template>
             </tr>
@@ -280,13 +277,13 @@
       <div class="flex items-center justify-between gap-3 text-[13px]">
         <div class="text-slate-400">{{ t(`페이지 ${page} / ${totalPages} · 총 ${sortedUsers.length}명`, `Page ${page} / ${totalPages} · ${sortedUsers.length} total`) }}</div>
         <div v-if="totalPages > 1" class="flex items-center gap-1">
-          <button type="button" class="min-w-7 border border-white/10 px-2 py-0.5 text-slate-300 hover:text-cyan-300 disabled:opacity-30" :disabled="page <= 1" @click="page = 1">«</button>
-          <button type="button" class="min-w-7 border border-white/10 px-2 py-0.5 text-slate-300 hover:text-cyan-300 disabled:opacity-30" :disabled="page <= 1" @click="page--">‹</button>
-          <button v-for="p in userPageNumbers" :key="`user-page-users2-${p}`" type="button" class="min-w-7 border border-white/10 px-2 py-0.5 text-slate-300 hover:text-cyan-300 disabled:opacity-30" :class="p === page ? 'bg-white/10 text-white' : ''" @click="page = p">{{ p }}</button>
+          <button type="button" class="min-w-7 border border-white/20 bg-white/[0.06] px-2 py-0.5 hover:bg-white/10 disabled:opacity-30" :disabled="page <= 1" @click="page = 1">«</button>
+          <button type="button" class="min-w-7 border border-white/20 bg-white/[0.06] px-2 py-0.5 hover:bg-white/10 disabled:opacity-30" :disabled="page <= 1" @click="page--">‹</button>
+          <button v-for="p in userPageNumbers" :key="`user-page-users2-${p}`" type="button" class="min-w-7 border border-white/20 bg-white/[0.06] px-2 py-0.5 hover:bg-white/10 disabled:opacity-30" :class="p === page ? '!bg-cyan-500/30 text-white' : ''" @click="page = p">{{ p }}</button>
           <span v-if="showUserPageTail" class="px-1 text-slate-500">~</span>
-          <button v-if="showUserPageTail" type="button" class="min-w-7 border border-white/10 px-2 py-0.5 text-slate-300 hover:text-cyan-300 disabled:opacity-30" @click="page = totalPages">{{ totalPages }}</button>
-          <button type="button" class="min-w-7 border border-white/10 px-2 py-0.5 text-slate-300 hover:text-cyan-300 disabled:opacity-30" :disabled="page >= totalPages" @click="page++">›</button>
-          <button type="button" class="min-w-7 border border-white/10 px-2 py-0.5 text-slate-300 hover:text-cyan-300 disabled:opacity-30" :disabled="page >= totalPages" @click="page = totalPages">»</button>
+          <button v-if="showUserPageTail" type="button" class="min-w-7 border border-white/20 bg-white/[0.06] px-2 py-0.5 hover:bg-white/10 disabled:opacity-30" @click="page = totalPages">{{ totalPages }}</button>
+          <button type="button" class="min-w-7 border border-white/20 bg-white/[0.06] px-2 py-0.5 hover:bg-white/10 disabled:opacity-30" :disabled="page >= totalPages" @click="page++">›</button>
+          <button type="button" class="min-w-7 border border-white/20 bg-white/[0.06] px-2 py-0.5 hover:bg-white/10 disabled:opacity-30" :disabled="page >= totalPages" @click="page = totalPages">»</button>
         </div>
       </div>
       <p v-if="error" class="text-[13px] text-red-300">{{ error }}</p>
