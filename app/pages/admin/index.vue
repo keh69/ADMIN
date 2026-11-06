@@ -152,7 +152,9 @@
     </div>
 
     <!-- 유저관리2 — 디자인 F · 표 격자형. 큰 화면에서는 페이지 좌우 여백을 넘어 화면 양쪽 24px까지 똑같이 넓힌다. (유저관리1/2는 같은 데이터·같은 저장 기능, 모양만 다름) -->
-    <div v-show="activeTab === 'users2'" class="space-y-2 lg:mx-[calc(24px_-_21.42857%)]">
+    <div v-show="activeTab === 'users2'" class="lg:mx-[calc(24px_-_21.42857%)]">
+      <!-- 제목·검색줄·표·페이지를 표 폭에 맞춘 한 덩어리로 묶어 화면 가운데에 놓는다 -->
+      <div class="mx-auto w-fit max-w-full space-y-2">
       <div class="flex flex-wrap items-baseline justify-between gap-3">
         <div class="flex items-baseline gap-3">
           <h2 class="text-base font-semibold text-slate-100">{{ t('유저관리2', 'Users 2') }}</h2>
@@ -160,6 +162,11 @@
         </div>
         <div class="flex items-center gap-3 text-[13px]">
           <span class="text-slate-400">{{ t('총 유저수', 'Total users') }} <span class="font-mono text-slate-100">{{ sortedUsers.length }}</span>{{ t('명', '') }}</span>
+          <!-- 지금 목록(검색·기간·하부보기 적용)에 보이는 유저들의 잔액 합계, 괄호는 일반 회원만 -->
+          <span class="text-slate-400" :title="`≈ ${usersBalanceTotal.all.toFixed(2)} USDT`">
+            {{ t('잔액 합계', 'Balance total') }} <span class="font-mono text-slate-100">{{ fmtUserBalance(usersBalanceTotal.all) }}</span>
+            <span class="text-slate-500">({{ t('회원만', 'members') }} <span class="font-mono">{{ fmtUserBalance(usersBalanceTotal.members) }}</span>)</span>
+          </span>
           <button type="button" class="border border-white/20 bg-white/[0.06] px-3 py-1 text-slate-100 hover:bg-white/10" @click="load">↻ {{ t('새로고침', 'Refresh') }}</button>
         </div>
       </div>
@@ -182,7 +189,7 @@
 
       <div v-if="loading" class="text-[13px] text-slate-400">{{ t('불러오는 중…', 'Loading…') }}</div>
       <div v-else class="overflow-x-auto">
-        <table class="mx-auto w-auto border-collapse text-[13px]">
+        <table class="w-auto border-collapse text-[13px]">
           <thead class="bg-white/[0.04] text-left text-slate-400">
             <tr>
               <th class="w-10 whitespace-nowrap border border-white/10 px-2 py-1 text-center font-normal">#</th>
@@ -288,6 +295,7 @@
       </div>
       <p v-if="error" class="text-[13px] text-red-300">{{ error }}</p>
       <p v-if="msg" class="text-[13px] text-emerald-300">{{ msg }}</p>
+      </div>
     </div>
 
     <!-- 유저 삭제 확인 팝업: Enter 또는 삭제 버튼 = 삭제, Esc 또는 바깥 클릭 = 닫기 -->
@@ -1599,6 +1607,30 @@ const sortedUsers = computed(() => {
   })
 })
 
+// 유저관리2 상단: 지금 목록의 잔액 합계(USDT)와 일반 회원만의 합계
+const usersBalanceTotal = computed(() => {
+  let all = 0
+  let members = 0
+  for (const u of sortedUsers.value) {
+    const v = Number(u.usdt) || 0
+    all += v
+    if (u.role === 'user') members += v
+  }
+  return { all, members }
+})
+function fmtUserBalance(usdt: number) {
+  if (userKrwRate.value > 0) return Math.round(usdt * userKrwRate.value).toLocaleString('ko-KR') + t('원', ' KRW')
+  return usdt.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' USDT'
+}
+// 유저관리2 탭을 처음 열면 잔액 많은 순(내림차순)으로 정렬해서 보여준다.
+let users2SortApplied = false
+watch(activeTab, (v) => {
+  if (v === 'users2' && !users2SortApplied) {
+    users2SortApplied = true
+    sortKey.value = 'usdt'
+    sortDir.value = 'desc'
+  }
+})
 const totalPages = computed(() => Math.max(1, Math.ceil(sortedUsers.value.length / pageSize.value)))
 const pagedUsers = computed(() => {
   const start = (page.value - 1) * pageSize.value
