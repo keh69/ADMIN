@@ -7,13 +7,18 @@ export default defineEventHandler(async (event) => {
   const supa = getSupabaseAdminClient()
   const { data, error } = await supa
     .from('bitduck_system_settings')
-    .select('dump_error_enabled, dump_error_min_sec, dump_error_max_sec, dump_error_test_enabled, dump_error_test_min_sec, dump_error_test_max_sec')
+    .select('dump_error_enabled, dump_error_min_sec, dump_error_max_sec, dump_error_test_enabled, dump_error_test_min_sec, dump_error_test_max_sec, dump_ls_enabled, dump_ls_pct, dump_ls_test_enabled, dump_ls_test_pct')
     .eq('id', 1)
     .maybeSingle()
   if (error) throw createError({ statusCode: 500, statusMessage: error.message })
   const d = (data || {}) as any
   return {
     ktx: { enabled: !!d.dump_error_enabled, minSec: Number(d.dump_error_min_sec ?? 5), maxSec: Number(d.dump_error_max_sec ?? 10) },
-    test: { enabled: !!d.dump_error_test_enabled, minSec: Number(d.dump_error_test_min_sec ?? 5), maxSec: Number(d.dump_error_test_max_sec ?? 10) }
+    test: { enabled: !!d.dump_error_test_enabled, minSec: Number(d.dump_error_test_min_sec ?? 5), maxSec: Number(d.dump_error_test_max_sec ?? 10) },
+    // 롱숏 덤프: 롱/숏 버튼을 누를 때 pct% 확률로 덤프 페이지로 이동
+    ls: {
+      ktx: { enabled: !!d.dump_ls_enabled, pct: Number(d.dump_ls_pct ?? 0) },
+      test: { enabled: !!d.dump_ls_test_enabled, pct: Number(d.dump_ls_test_pct ?? 0) }
+    }
   }
 })

@@ -422,6 +422,52 @@
           <p v-if="dumpMsg[row.site]" class="mt-2 text-sm text-emerald-300">{{ dumpMsg[row.site] }}</p>
         </div>
       </div>
+
+      <!-- 롱숏 덤프: ON이면 회원이 차트 화면에서 롱/숏 버튼을 누를 때 적어 둔 확률(%)로 덤프 페이지로 넘어간다 -->
+      <p class="mt-6 text-sm text-slate-400">
+        {{ t('롱숏 덤프가 ON이면 그 사이트 차트 화면에서 회원이 롱/숏 버튼을 누를 때 적어 둔 확률(%)로 덤프 에러 페이지로 넘어갑니다(주문은 들어가지 않음).', 'When long/short dump is ON, members pressing Long/Short on that site\'s chart go to the dump error page with the given probability (%) (no order is placed).') }}
+      </p>
+      <div class="mt-3 space-y-3">
+        <div
+          v-for="row in dumpLsRows"
+          :key="'ls-' + row.site"
+          class="rounded-xl border border-white/10 bg-white/5 p-4"
+        >
+          <div class="flex flex-wrap items-center gap-4">
+            <span class="w-28 text-sm font-semibold text-slate-200">{{ row.label }}</span>
+            <button
+              type="button"
+              class="rounded-full px-5 py-2 text-sm font-semibold"
+              :class="dumpLsDraft[row.site].enabled ? 'bg-emerald-500 text-white' : 'bg-white/10 text-slate-300'"
+              @click="dumpLsDraft[row.site].enabled = !dumpLsDraft[row.site].enabled"
+            >
+              {{ dumpLsDraft[row.site].enabled ? 'ON' : 'OFF' }}
+            </button>
+            <div class="flex items-center gap-2 text-sm text-slate-300">
+              <span>{{ t('확률', 'Chance') }}</span>
+              <input
+                v-model.number="dumpLsDraft[row.site].pct"
+                type="number"
+                min="0"
+                max="100"
+                step="1"
+                class="w-24 rounded-md bg-white/5 px-3 py-2 text-sm outline-none ring-1 ring-white/10 focus:ring-indigo-500"
+              />
+              <span>%</span>
+            </div>
+            <button
+              type="button"
+              class="rounded-md bg-indigo-500 px-4 py-2 text-sm font-semibold hover:bg-indigo-400 disabled:opacity-50"
+              :disabled="dumpLsSaving[row.site]"
+              @click="saveDumpLsSettings(row.site)"
+            >
+              {{ dumpLsSaving[row.site] ? t('저장 중…', 'Saving…') : t('저장', 'Save') }}
+            </button>
+          </div>
+          <p v-if="dumpLsError[row.site]" class="mt-2 text-sm text-red-300">{{ dumpLsError[row.site] }}</p>
+          <p v-if="dumpLsMsg[row.site]" class="mt-2 text-sm text-emerald-300">{{ dumpLsMsg[row.site] }}</p>
+        </div>
+      </div>
     </div>
 
     <!-- 정산/기타 설정 -->
@@ -3076,11 +3122,45 @@ const dumpDraft = reactive<Record<DumpSite, DumpCfg>>({
 const dumpSaving = reactive<Record<DumpSite, boolean>>({ ktx: false, test: false })
 const dumpError = reactive<Record<DumpSite, string | null>>({ ktx: null, test: null })
 const dumpMsg = reactive<Record<DumpSite, string | null>>({ ktx: null, test: null })
+// 롱숏 덤프: 롱/숏 버튼을 누를 때 pct% 확률로 덤프 페이지로 이동(거래소/테스트 따로)
+type DumpLsCfg = { enabled: boolean; pct: number }
+const dumpLsRows = computed<Array<{ site: DumpSite; label: string }>>(() => [
+  { site: 'ktx', label: t('거래소 롱숏 덤프', 'Exchange L/S dump') },
+  { site: 'test', label: t('테스트 롱숏 덤프', 'Test L/S dump') }
+])
+const dumpLsDraft = reactive<Record<DumpSite, DumpLsCfg>>({
+  ktx: { enabled: false, pct: 0 },
+  test: { enabled: false, pct: 0 }
+})
+const dumpLsSaving = reactive<Record<DumpSite, boolean>>({ ktx: false, test: false })
+const dumpLsError = reactive<Record<DumpSite, string | null>>({ ktx: null, test: null })
+const dumpLsMsg = reactive<Record<DumpSite, string | null>>({ ktx: null, test: null })
+async function saveDumpLsSettings(site: DumpSite) {
+  dumpLsSaving[site] = true
+  dumpLsError[site] = null
+  dumpLsMsg[site] = null
+  try {
+    const cur = dumpLsDraft[site]
+    const pct = Math.min(100, Math.max(0, Number(cur.pct) || 0))
+    const d = await $fetch<DumpLsCfg>('/api/admin/settings/dump-ls', {
+      method: 'POST',
+      body: { site, enabled: !!cur.enabled, pct }
+    })
+    Object.assign(dumpLsDraft[site], { enabled: d.enabled, pct: d.pct })
+    dumpLsMsg[site] = t('저장되었습니다.', 'Saved.')
+  } catch (e: any) {
+    dumpLsError[site] = e?.data?.statusMessage || t('저장 실패', 'Save failed')
+  } finally {
+    dumpLsSaving[site] = false
+  }
+}
 async function loadDumpSettings() {
   try {
-    const d = await $fetch<Record<DumpSite, DumpCfg>>('/api/admin/settings/dump-error')
+    const d = await $fetch<Record<DumpSite, DumpCfg> & { ls?: Record<DumpSite, DumpLsCfg> }>('/api/admin/settings/dump-error')
     if (d?.ktx) Object.assign(dumpDraft.ktx, d.ktx)
     if (d?.test) Object.assign(dumpDraft.test, d.test)
+    if (d?.ls?.ktx) Object.assign(dumpLsDraft.ktx, d.ls.ktx)
+    if (d?.ls?.test) Object.assign(dumpLsDraft.test, d.ls.test)
   } catch {
     // 기본값 유지
   }
