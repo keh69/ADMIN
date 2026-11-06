@@ -159,7 +159,7 @@
                   {{ thread.unreadCount }}
                 </span>
               </div>
-              <div class="mt-1 line-clamp-1 text-xs text-slate-400">{{ thread.lastMessage || thread.subject || t('대화 없음', 'No conversation') }}</div>
+              <div class="mt-1 line-clamp-1 text-xs text-slate-400">{{ messagePreviewText(thread.lastMessage, t('[이미지]', '[Image]')) || thread.subject || t('대화 없음', 'No conversation') }}</div>
               <div class="mt-2 text-[12px] text-slate-500">{{ formatDateTime(thread.lastAt) }}</div>
             </button>
             <div v-if="filteredThreads.length === 0" class="px-3 py-8 text-center text-sm text-slate-500">{{ t('대화가 없습니다.', 'No conversations.') }}</div>
@@ -200,7 +200,7 @@
                 </div>
               </div>
 
-              <div ref="messageListEl" class="max-h-[440px] space-y-3 overflow-auto pr-1">
+              <div ref="messageListEl" class="max-h-[440px] space-y-3 overflow-auto pr-1" @scroll.passive="onChatListScroll">
                 <div
                   v-for="message in activeMessages"
                   :key="message.id"
@@ -208,7 +208,14 @@
                   :class="message.sender_id === me?.id ? 'ml-auto bg-cyan-500/15 text-slate-100' : 'bg-white/5 text-slate-200'"
                 >
                   <div class="mb-1 text-[12px] text-slate-400">{{ message.senderName }}</div>
-                  <div class="whitespace-pre-wrap leading-6">{{ message.body }}</div>
+                  <div class="whitespace-pre-wrap leading-6">
+                    <template v-for="(part, pi) in splitMessageBody(message.body)" :key="pi">
+                      <a v-if="part.type === 'img'" :href="part.src" target="_blank" rel="noopener" class="my-1 block w-fit">
+                        <img :src="part.src" alt="" class="max-h-64 max-w-full rounded-lg border border-white/10 bg-white/5" @load="onChatImageLoad" />
+                      </a>
+                      <div v-else>{{ part.text }}</div>
+                    </template>
+                  </div>
                   <div class="mt-2 text-[12px] text-slate-500">{{ formatDateTime(message.created_at) }}</div>
                 </div>
                 <div v-if="activeMessages.length === 0" class="py-8 text-center text-sm text-slate-500">{{ t('아직 쪽지가 없습니다.', 'No messages yet.') }}</div>
@@ -221,17 +228,43 @@
                   class="w-full rounded-md border border-white/10 bg-[#020b16] px-3 py-2 text-sm text-slate-100 outline-none placeholder:text-slate-500 focus:border-cyan-500/40"
                   :placeholder="t('답장을 입력하세요', 'Enter your reply')"
                   :key="`msg-reply-${locale}`"
+                  @paste="onReplyPaste"
                 />
-                <div class="mt-3 flex items-center justify-end gap-2">
+                <div v-if="replyImages.length" class="mt-2 flex flex-wrap gap-2">
+                  <div v-for="(img, ii) in replyImages" :key="img.id" class="relative">
+                    <img :src="img.dataUrl" alt="" class="h-16 w-16 rounded-md border border-white/10 object-cover" />
+                    <button
+                      type="button"
+                      class="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-slate-900 text-[12px] leading-none text-slate-200 ring-1 ring-white/20 hover:bg-rose-600"
+                      @click="removeReplyImage(ii)"
+                    >
+                      ×
+                    </button>
+                  </div>
+                </div>
+                <div class="mt-3 flex flex-wrap items-center justify-between gap-2">
+                  <div class="flex flex-wrap items-center gap-2">
+                    <input ref="replyFileInput" type="file" accept="image/*,.bmp" multiple class="hidden" @change="onReplyFilePick" />
+                    <button
+                      type="button"
+                      class="rounded-md bg-white/10 px-3 py-2 text-sm text-slate-200 hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-50"
+                      :disabled="replyImages.length >= MESSAGE_ATTACH_MAX"
+                      @click="replyFileInput?.click()"
+                    >
+                      {{ t('첨부파일 추가', 'Add Attachment') }}
+                    </button>
+                    <span class="text-[12px] text-slate-500">{{ t('이미지는 Ctrl+V로 붙여넣을 수도 있습니다.', 'You can also paste images with Ctrl+V.') }}</span>
+                  </div>
                   <button
                     class="rounded-md bg-cyan-500 px-4 py-2 text-sm font-medium text-slate-950 hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-50"
-                    :disabled="replySending || !replyBody || !canManageMessages"
+                    :disabled="replySending || (!replyBody && !replyImages.length) || !canManageMessages"
                     @click="sendReply"
                   >
                     {{ replySending ? t('전송 중...', 'Sending...') : t('답장 보내기', 'Send Reply') }}
                   </button>
                 </div>
                 <p v-if="!canManageMessages" class="mt-2 text-sm text-amber-300">{{ t('어드민권한이 없어 답장을 보낼 수 없습니다.', 'You do not have admin permission, so you cannot send a reply.') }}</p>
+                <p v-if="replyAttachError" class="mt-2 text-sm text-rose-300">{{ replyAttachError }}</p>
                 <p v-if="replyError" class="mt-2 text-sm text-rose-300">{{ replyError }}</p>
               </div>
             </div>
@@ -376,6 +409,7 @@
 </template>
 
 <script setup lang="ts">
+import { MESSAGE_ATTACH_MAX, imageFileToDataUrl, imageFilesFromClipboard, messagePreviewText, splitMessageBody } from '~/utils/messageBody'
 definePageMeta({ middleware: ['admin'] })
 const { t, locale } = useLocale()
 
@@ -658,6 +692,57 @@ const sendError = ref<string | null>(null)
 const replyError = ref<string | null>(null)
 const sendMessageText = ref<string | null>(null)
 
+// ── 고객센터 쪽지 이미지 첨부: Ctrl+V 붙여넣기 / [첨부파일 추가] (비회원 상담은 제외) ──
+type PendingImage = { id: number; dataUrl: string }
+const replyImages = ref<PendingImage[]>([])
+const replyAttachError = ref<string | null>(null)
+const replyFileInput = ref<HTMLInputElement | null>(null)
+let pendingImageSeq = 0
+async function addReplyFiles(files: File[]) {
+  replyAttachError.value = null
+  for (const f of files) {
+    if (replyImages.value.length >= MESSAGE_ATTACH_MAX) {
+      replyAttachError.value = t(`이미지는 한 번에 ${MESSAGE_ATTACH_MAX}장까지 보낼 수 있습니다.`, `You can send up to ${MESSAGE_ATTACH_MAX} images at once.`)
+      break
+    }
+    if (!f.type.startsWith('image/') && !/\.(bmp|jpe?g|png|gif|webp)$/i.test(f.name)) {
+      replyAttachError.value = t('이미지 파일만 첨부할 수 있습니다.', 'Only image files can be attached.')
+      continue
+    }
+    try {
+      replyImages.value.push({ id: ++pendingImageSeq, dataUrl: await imageFileToDataUrl(f) })
+    } catch {
+      replyAttachError.value = t('이미지를 불러오지 못했습니다.', 'Failed to load the image.')
+    }
+  }
+}
+function onReplyPaste(e: ClipboardEvent) {
+  const files = imageFilesFromClipboard(e)
+  if (!files.length) return
+  // 그림만 복사한 경우에는 기본 붙여넣기(파일 이름 글자 등)를 막고 그림만 첨부한다.
+  if (!e.clipboardData?.getData('text/plain')) e.preventDefault()
+  addReplyFiles(files)
+}
+function onReplyFilePick(e: Event) {
+  const input = e.target as HTMLInputElement
+  const files = Array.from(input.files || [])
+  input.value = ''
+  addReplyFiles(files)
+}
+function removeReplyImage(index: number) {
+  replyImages.value.splice(index, 1)
+  replyAttachError.value = null
+}
+// 대화창을 맨 아래로 보고 있을 때 그림이 늦게 뜨면(높이가 늘어나면) 다시 맨 아래로 맞춘다.
+let chatStickBottom = true
+function onChatListScroll(e: Event) {
+  const el = e.target as HTMLElement
+  chatStickBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 120
+}
+function onChatImageLoad() {
+  if (chatStickBottom && messageListEl.value) messageListEl.value.scrollTop = messageListEl.value.scrollHeight
+}
+
 const filteredRecipients = computed(() => {
   const q = recipientKeyword.value.trim().toLowerCase()
   return recipients.value.filter((u) => !q || [u.username, u.name, String(u.id)].some((v) => String(v || '').toLowerCase().includes(q)))
@@ -752,6 +837,8 @@ async function openThread(thread: ThreadSummary, scrollPage = false) {
   activeThread.value = thread
   replyBody.value = ''
   replyError.value = null
+  replyImages.value = []
+  replyAttachError.value = null
   if (scrollPage) nextTick(() => scrollPageToPane(chatPaneEl.value))
   const res = await $fetch<{ items: MessageItem[]; pendingResetRequest: PendingResetRequest }>('/api/messages/thread', {
     query: { userId: thread.userId },
@@ -816,7 +903,7 @@ async function sendMessage() {
 }
 
 async function sendReply() {
-  if (!activeThread.value || !replyBody.value.trim()) return
+  if (!activeThread.value || (!replyBody.value.trim() && !replyImages.value.length)) return
   replySending.value = true
   replyError.value = null
   try {
@@ -827,10 +914,12 @@ async function sendReply() {
       body: {
         userIds: [activeThread.value.userId],
         subject: activeThread.value.subject || t('운영자 답장', 'Admin Reply'),
-        body: replyBody.value.trim()
+        body: replyBody.value.trim(),
+        images: replyImages.value.map((img) => img.dataUrl)
       }
     })
     replyBody.value = ''
+    replyImages.value = []
     await openThread(activeThread.value)
   } catch (e: any) {
     replyError.value = e?.data?.statusMessage || t('답장 전송에 실패했습니다.', 'Failed to send reply.')
