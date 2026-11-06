@@ -37,6 +37,14 @@
             <label class="text-sm text-slate-300">{{ t('설명', 'Description') }}</label>
             <textarea v-model="draft.description" rows="5" class="mt-1 w-full rounded-lg bg-white/5 px-3 py-2 text-sm outline-none ring-1 ring-white/10 focus:ring-cyan-500" />
           </div>
+          <!-- 회원이 영어로 볼 때 보이는 문구(비우면 한국어가 그대로 보인다) -->
+          <div class="rounded-lg border border-white/10 bg-black/20 p-3">
+            <div class="text-xs font-semibold text-slate-400">{{ t('영어 화면용 (선택)', 'For English screens (optional)') }}</div>
+            <label class="mt-2 block text-sm text-slate-300">{{ t('영어 제목', 'English title') }}</label>
+            <input v-model="draft.titleEn" class="mt-1 w-full rounded-lg bg-white/5 px-3 py-2 outline-none ring-1 ring-white/10 focus:ring-cyan-500" />
+            <label class="mt-2 block text-sm text-slate-300">{{ t('영어 설명', 'English description') }}</label>
+            <textarea v-model="draft.descriptionEn" rows="4" class="mt-1 w-full rounded-lg bg-white/5 px-3 py-2 text-sm outline-none ring-1 ring-white/10 focus:ring-cyan-500" />
+          </div>
           <div>
             <div class="flex items-center justify-between">
               <label class="text-sm text-slate-300">{{ t('상금', 'Prizes') }}</label>
@@ -108,7 +116,20 @@ definePageMeta({ middleware: ['admin', 'super-admin'] })
 
 type Prize = { rank: string; reward: string }
 type Detail = {
-  event: { id: number; site: string; code: string; name: string; kind: string; title: string; description: string; prizes: Prize[]; enabled: boolean; label: string }
+  event: {
+    id: number
+    site: string
+    code: string
+    name: string
+    kind: string
+    title: string
+    description: string
+    titleEn: string
+    descriptionEn: string
+    prizes: Prize[]
+    enabled: boolean
+    label: string
+  }
   period: { from: string; to: string; week: string }
   ranking: Array<{ rank: number; userId: number; username: string; volume: number; trades: number }>
 }
@@ -120,7 +141,14 @@ const id = computed(() => Number(route.params.id))
 const week = ref<'this' | 'last'>('this')
 const detail = ref<Detail | null>(null)
 const loadError = ref<string | null>(null)
-const draft = reactive<{ title: string; description: string; enabled: boolean; prizes: Prize[] }>({ title: '', description: '', enabled: true, prizes: [] })
+const draft = reactive<{ title: string; description: string; titleEn: string; descriptionEn: string; enabled: boolean; prizes: Prize[] }>({
+  title: '',
+  description: '',
+  titleEn: '',
+  descriptionEn: '',
+  enabled: true,
+  prizes: []
+})
 const saving = ref(false)
 const saveError = ref<string | null>(null)
 const saveMsg = ref<string | null>(null)
@@ -133,6 +161,8 @@ async function load(resetDraft = true) {
     if (resetDraft) {
       draft.title = res.event.title
       draft.description = res.event.description
+      draft.titleEn = res.event.titleEn || ''
+      draft.descriptionEn = res.event.descriptionEn || ''
       draft.enabled = res.event.enabled
       draft.prizes = res.event.prizes.map((p) => ({ rank: String(p.rank || ''), reward: String(p.reward || '') }))
     }
@@ -148,7 +178,7 @@ async function save() {
   try {
     await $fetch(`/api/admin/events/${id.value}`, {
       method: 'POST',
-      body: { title: draft.title, description: draft.description, enabled: draft.enabled, prizes: draft.prizes.filter((p) => p.rank.trim() && p.reward.trim()) }
+      body: { title: draft.title, description: draft.description, titleEn: draft.titleEn, descriptionEn: draft.descriptionEn, enabled: draft.enabled, prizes: draft.prizes.filter((p) => p.rank.trim() && p.reward.trim()) }
     })
     saveMsg.value = t('저장했습니다.', 'Saved.')
     await load(true)

@@ -6,6 +6,9 @@ import { logAdminAction } from '../../../utils/supa-log'
 const BodySchema = z.object({
   title: z.string().trim().min(1).max(100),
   description: z.string().trim().max(2000),
+  // 영어 화면용(비우면 회원 화면에서 한국어가 그대로 보인다)
+  titleEn: z.string().trim().max(100).optional().default(''),
+  descriptionEn: z.string().trim().max(2000).optional().default(''),
   enabled: z.boolean(),
   prizes: z
     .array(z.object({ rank: z.string().trim().min(1).max(30), reward: z.string().trim().min(1).max(60) }))
@@ -22,7 +25,15 @@ export default defineEventHandler(async (event) => {
   const b = parsed.data
   const { error } = await getSupabaseAdminClient()
     .from('bitduck_events')
-    .update({ title: b.title, description: b.description, enabled: b.enabled, prizes: b.prizes, updated_at: new Date().toISOString() })
+    .update({
+      title: b.title,
+      description: b.description,
+      title_en: b.titleEn,
+      description_en: b.descriptionEn,
+      enabled: b.enabled,
+      prizes: b.prizes,
+      updated_at: new Date().toISOString()
+    })
     .eq('id', id)
   if (error) throw error
   await logAdminAction(event, { adminUserId: admin.id, action: 'event_update', targetType: 'event', targetId: id, detail: { enabled: b.enabled } })
