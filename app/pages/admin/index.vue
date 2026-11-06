@@ -14,15 +14,22 @@
       </button>
     </div>
 
-    <!-- 유저관리1 — 디자인 B · 레지스트리 표형. 큰 화면에서는 페이지 좌우 여백을 넘어 화면 양쪽 24px까지 똑같이 넓힌다. (유저관리1/2는 같은 데이터·같은 저장 기능, 모양만 다름) -->
-    <div v-show="activeTab === 'users'" class="space-y-2 lg:mx-[calc(24px_-_21.42857%)]">
+    <!-- 유저관리 — 디자인 F · 표 격자형. 큰 화면에서는 페이지 좌우 여백을 넘어 화면 양쪽 24px까지 똑같이 넓힌다. -->
+    <div v-show="activeTab === 'users'" class="lg:mx-[calc(24px_-_21.42857%)]">
+      <!-- 제목·검색줄·표·페이지를 표 폭에 맞춘 한 덩어리로 묶어 화면 가운데에 놓는다 -->
+      <div class="mx-auto w-fit max-w-full space-y-2">
       <div class="flex flex-wrap items-baseline justify-between gap-3">
         <div class="flex items-baseline gap-3">
-          <h2 class="text-base font-semibold text-slate-100">{{ t('유저관리1', 'Users 1') }}</h2>
-          <span class="text-[11px] text-slate-500">{{ t('디자인 B · 레지스트리 표형', 'Design B · Registry table') }}</span>
+          <h2 class="text-base font-semibold text-slate-100">{{ t('유저관리', 'Users') }}</h2>
+          <span class="text-[11px] text-slate-500">{{ t('디자인 F · 표 격자형', 'Design F · Grid') }}</span>
         </div>
         <div class="flex items-center gap-3 text-[13px]">
           <span class="text-slate-400">{{ t('총 유저수', 'Total users') }} <span class="font-mono text-slate-100">{{ sortedUsers.length }}</span>{{ t('명', '') }}</span>
+          <!-- 지금 목록(검색·기간·하부보기 적용)에 보이는 유저들의 잔액 합계, 괄호는 일반 회원만 -->
+          <span class="text-slate-400" :title="`≈ ${usersBalanceTotal.all.toFixed(2)} USDT`">
+            {{ t('잔액 합계', 'Balance total') }} <span class="font-mono text-slate-100">{{ fmtUserBalance(usersBalanceTotal.all) }}</span>
+            <span class="text-slate-500">({{ t('회원만', 'members') }} <span class="font-mono">{{ fmtUserBalance(usersBalanceTotal.members) }}</span>)</span>
+          </span>
           <button type="button" class="border border-white/20 bg-white/[0.06] px-3 py-1 text-slate-100 hover:bg-white/10" @click="load">↻ {{ t('새로고침', 'Refresh') }}</button>
         </div>
       </div>
@@ -45,151 +52,7 @@
 
       <div v-if="loading" class="text-[13px] text-slate-400">{{ t('불러오는 중…', 'Loading…') }}</div>
       <div v-else class="overflow-x-auto">
-        <table class="w-full border border-white/10 text-[13px]">
-          <thead class="bg-white/[0.04] text-left text-slate-400">
-            <tr>
-              <th class="whitespace-nowrap border-b border-r border-white/10 px-2 py-1 font-normal sortable-th cursor-pointer select-none" @click="toggleSort('username')">{{ t('아이디', 'Username') }}<span class="sort-icon">{{ sortArrow('username') || ' ⇅' }}</span></th>
-              <th class="whitespace-nowrap border-b border-r border-white/10 px-2 py-1 font-normal sortable-th cursor-pointer select-none" @click="toggleSort('name')">{{ t('이름', 'Name') }}<span class="sort-icon">{{ sortArrow('name') || ' ⇅' }}</span></th>
-              <th class="whitespace-nowrap border-b border-r border-white/10 px-2 py-1 font-normal">{{ t('계좌정보', 'Bank') }}</th>
-              <th class="whitespace-nowrap border-b border-r border-white/10 px-2 py-1 font-normal sortable-th cursor-pointer select-none" @click="toggleSort('usdt')">{{ t('잔액(원)', 'Balance (KRW)') }}<span class="sort-icon">{{ sortArrow('usdt') || ' ⇅' }}</span></th>
-              <th class="whitespace-nowrap border-b border-r border-white/10 px-2 py-1 font-normal sortable-th cursor-pointer select-none" @click="toggleSort('referralCode')">{{ t('추천코드', 'Referral') }}<span class="sort-icon">{{ sortArrow('referralCode') || ' ⇅' }}</span></th>
-              <th class="whitespace-nowrap border-b border-r border-white/10 px-2 py-1 font-normal sortable-th cursor-pointer select-none" @click="toggleSort('topCode')">{{ t('최상위코드', 'Top Code') }}<span class="sort-icon">{{ sortArrow('topCode') || ' ⇅' }}</span></th>
-              <th class="whitespace-nowrap border-b border-r border-white/10 px-2 py-1 font-normal sortable-th cursor-pointer select-none" @click="toggleSort('role')">{{ t('역할', 'Role') }}<span class="sort-icon">{{ sortArrow('role') || ' ⇅' }}</span></th>
-              <th class="whitespace-nowrap border-b border-r border-white/10 px-2 py-1 font-normal">{{ t('정산유형', 'Settlement') }}</th>
-              <th class="whitespace-nowrap border-b border-r border-white/10 px-2 py-1 font-normal sortable-th cursor-pointer select-none" @click="toggleSort('created_at')">{{ t('가입일', 'Joined') }}<span class="sort-icon">{{ sortArrow('created_at') || ' ⇅' }}</span></th>
-              <th class="whitespace-nowrap border-b border-r border-white/10 px-2 py-1 font-normal sortable-th cursor-pointer select-none" @click="toggleSort('last_login')">{{ t('최근 접속일', 'Last Login') }}<span class="sort-icon">{{ sortArrow('last_login') || ' ⇅' }}</span></th>
-              <th class="whitespace-nowrap border-b border-white/10 px-2 py-1 font-normal">{{ t('작업', 'Actions') }}</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="(u, ui) in pagedUsers" :key="u.id" class="hover:bg-cyan-500/10 focus-within:bg-cyan-500/15">
-              <template v-if="userDraft[u.id]">
-                <td class="border-r border-white/5 p-0">
-                  <input v-model.trim="userDraft[u.id].username" :disabled="isLockedUser(u)" class="w-28 bg-transparent px-2 py-1 text-slate-100 outline-none focus:bg-black/40 disabled:cursor-not-allowed disabled:opacity-50 [&>option]:bg-[#0b1726]" @blur="saveUserRow(u.id)" @keyup.enter="saveUserRow(u.id)" />
-                </td>
-                <td class="border-r border-white/5 p-0">
-                  <input v-model.trim="userDraft[u.id].name" :disabled="isLockedUser(u)" class="w-24 bg-transparent px-2 py-1 text-slate-100 outline-none focus:bg-black/40 disabled:cursor-not-allowed disabled:opacity-50 [&>option]:bg-[#0b1726]" @blur="saveUserRow(u.id)" @keyup.enter="saveUserRow(u.id)" />
-                </td>
-                <td class="border-r border-white/5 px-2 py-1">
-                  <button type="button" class="mr-1 border border-white/20 bg-white/[0.06] px-2 py-0.5 text-[12px] hover:bg-white/10 disabled:opacity-40" :disabled="isLockedUser(u)" @click="openAccountModal(u)">{{ t('계좌정보', 'Bank') }}</button>
-                </td>
-                <td class="border-r border-white/5 p-0">
-                  <input
-                    v-if="userKrwRate > 0"
-                    :value="userDraft[u.id].krw"
-                    type="text"
-                    inputmode="numeric"
-                    :title="`≈ ${(Number(userDraft[u.id].usdt) || 0).toFixed(2)} USDT`"
-                    class="w-32 text-right font-mono bg-transparent px-2 py-1 text-slate-100 outline-none focus:bg-black/40 disabled:cursor-not-allowed disabled:opacity-50 [&>option]:bg-[#0b1726]"
-                    @input="onUserKrwInput(u.id, $event)"
-                    @blur="saveUserRow(u.id)"
-                    @keyup.enter="saveUserRow(u.id)"
-                  />
-                  <input v-else v-model.number="userDraft[u.id].usdt" type="number" min="0" step="0.01" class="w-28 text-right font-mono bg-transparent px-2 py-1 text-slate-100 outline-none focus:bg-black/40 disabled:cursor-not-allowed disabled:opacity-50 [&>option]:bg-[#0b1726]" @blur="saveUserRow(u.id)" @keyup.enter="saveUserRow(u.id)" />
-                </td>
-                <td class="border-r border-white/5 p-0">
-                  <input v-model.trim="userDraft[u.id].referralCode" :disabled="isLockedUser(u)" class="w-24 bg-transparent px-2 py-1 text-slate-100 outline-none focus:bg-black/40 disabled:cursor-not-allowed disabled:opacity-50 [&>option]:bg-[#0b1726]" @blur="saveUserRow(u.id)" @keyup.enter="saveUserRow(u.id)" />
-                </td>
-                <td class="border-r border-white/5 px-2 py-1 whitespace-nowrap text-slate-300">{{ u.topCode || '—' }}</td>
-                <td class="border-r border-white/5 p-0">
-                  <select v-model="userDraft[u.id].role" :disabled="isLockedUser(u)" class="w-28 bg-transparent px-2 py-1 text-slate-100 outline-none focus:bg-black/40 disabled:cursor-not-allowed disabled:opacity-50 [&>option]:bg-[#0b1726]" @change="saveUserRow(u.id)">
-                    <option value="user">{{ t('회원', 'Member') }}</option>
-                    <option v-for="r in roles" :key="r.id" :value="r.id">{{ r.label }}</option>
-                    <option value="super_admin">{{ t('최고관리자', 'Super Admin') }}</option>
-                  </select>
-                </td>
-                <td class="border-r border-white/5 p-0">
-                  <div v-if="u.role !== 'user' && u.role !== 'super_admin'" class="flex items-center">
-                    <select v-model="userDraft[u.id].settlementType" class="w-24 bg-transparent px-2 py-1 text-slate-100 outline-none focus:bg-black/40 disabled:cursor-not-allowed disabled:opacity-50 [&>option]:bg-[#0b1726]" @change="saveUserRow(u.id)">
-                      <option value="loss">{{ t('손실정산', 'Loss') }}</option>
-                      <option value="referral">{{ t('레퍼럴정산', 'Referral') }}</option>
-                    </select>
-                    <input
-                      v-model="userDraft[u.id].settlementPercent"
-                      type="number"
-                      min="0"
-                      max="100"
-                      step="0.1"
-                      :placeholder="t('기본값', 'Default')"
-                      :title="t('이 부관리자 전용 정산비율(%). 비워두면 정산/기타 설정의 기본값을 사용합니다.', 'Per-admin settlement rate (%). Blank = default.')"
-                      :key="`settlement-percent-users-${u.id}-${locale}`"
-                      class="w-14 text-right font-mono bg-transparent px-2 py-1 text-slate-100 outline-none focus:bg-black/40 disabled:cursor-not-allowed disabled:opacity-50 [&>option]:bg-[#0b1726]"
-                      @blur="saveUserRow(u.id)"
-                      @keyup.enter="saveUserRow(u.id)"
-                    />
-                    <span class="pr-2 text-[12px] text-slate-500">%</span>
-                  </div>
-                  <span v-else class="px-2 text-slate-600">—</span>
-                </td>
-                <td class="border-r border-white/5 px-2 py-1 whitespace-nowrap font-mono text-slate-400">{{ dateOnly(u.created_at) }}</td>
-                <td class="border-r border-white/5 px-2 py-1 whitespace-nowrap font-mono text-slate-400">{{ u.last_login ? dateOnly(u.last_login) : '—' }}</td>
-                <td class="px-2 py-1 whitespace-nowrap">
-                  <button type="button" class="mr-1 border border-white/20 bg-white/[0.06] px-2 py-0.5 text-[12px] hover:bg-white/10" @click="referralFilter = u.username">{{ t('하부보기', 'Downline') }}</button>
-                  <button type="button" class="mr-1 border border-white/20 bg-white/[0.06] px-2 py-0.5 text-[12px] hover:bg-white/10 text-amber-200 disabled:opacity-40" :disabled="userResetting === u.id || isLockedUser(u)" @click="resetUserPassword(u.id)">{{ t('비번초기화', 'Reset PW') }}</button>
-                  <button type="button" class="mr-1 border border-white/20 bg-white/[0.06] px-2 py-0.5 text-[12px] hover:bg-white/10 text-emerald-200 disabled:opacity-40" :disabled="loggingInAs === u.id" @click="loginAsUser(u.id)">{{ t('로그인', 'Login') }}</button>
-                  <button type="button" class="mr-1 border border-white/20 bg-white/[0.06] px-2 py-0.5 text-[12px] hover:bg-white/10 text-rose-200 disabled:opacity-40" :disabled="isLockedUser(u) || u.id === me?.id" @click="askDeleteUser(u)">{{ t('삭제', 'Delete') }}</button>
-                </td>
-              </template>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <div class="flex items-center justify-between gap-3 text-[13px]">
-        <div class="text-slate-400">{{ t(`페이지 ${page} / ${totalPages} · 총 ${sortedUsers.length}명`, `Page ${page} / ${totalPages} · ${sortedUsers.length} total`) }}</div>
-        <div v-if="totalPages > 1" class="flex items-center gap-1">
-          <button type="button" class="min-w-7 border border-white/20 bg-white/[0.06] px-2 py-0.5 hover:bg-white/10 disabled:opacity-30" :disabled="page <= 1" @click="page = 1">«</button>
-          <button type="button" class="min-w-7 border border-white/20 bg-white/[0.06] px-2 py-0.5 hover:bg-white/10 disabled:opacity-30" :disabled="page <= 1" @click="page--">‹</button>
-          <button v-for="p in userPageNumbers" :key="`user-page-users-${p}`" type="button" class="min-w-7 border border-white/20 bg-white/[0.06] px-2 py-0.5 hover:bg-white/10 disabled:opacity-30" :class="p === page ? '!bg-cyan-500/30 text-white' : ''" @click="page = p">{{ p }}</button>
-          <span v-if="showUserPageTail" class="px-1 text-slate-500">~</span>
-          <button v-if="showUserPageTail" type="button" class="min-w-7 border border-white/20 bg-white/[0.06] px-2 py-0.5 hover:bg-white/10 disabled:opacity-30" @click="page = totalPages">{{ totalPages }}</button>
-          <button type="button" class="min-w-7 border border-white/20 bg-white/[0.06] px-2 py-0.5 hover:bg-white/10 disabled:opacity-30" :disabled="page >= totalPages" @click="page++">›</button>
-          <button type="button" class="min-w-7 border border-white/20 bg-white/[0.06] px-2 py-0.5 hover:bg-white/10 disabled:opacity-30" :disabled="page >= totalPages" @click="page = totalPages">»</button>
-        </div>
-      </div>
-      <p v-if="error" class="text-[13px] text-red-300">{{ error }}</p>
-      <p v-if="msg" class="text-[13px] text-emerald-300">{{ msg }}</p>
-    </div>
-
-    <!-- 유저관리2 — 디자인 F · 표 격자형. 큰 화면에서는 페이지 좌우 여백을 넘어 화면 양쪽 24px까지 똑같이 넓힌다. (유저관리1/2는 같은 데이터·같은 저장 기능, 모양만 다름) -->
-    <div v-show="activeTab === 'users2'" class="lg:mx-[calc(24px_-_21.42857%)]">
-      <!-- 제목·검색줄·표·페이지를 표 폭에 맞춘 한 덩어리로 묶어 화면 가운데에 놓는다 -->
-      <div class="mx-auto w-fit max-w-full space-y-2">
-      <div class="flex flex-wrap items-baseline justify-between gap-3">
-        <div class="flex items-baseline gap-3">
-          <h2 class="text-base font-semibold text-slate-100">{{ t('유저관리2', 'Users 2') }}</h2>
-          <span class="text-[11px] text-slate-500">{{ t('디자인 F · 표 격자형', 'Design F · Grid') }}</span>
-        </div>
-        <div class="flex items-center gap-3 text-[13px]">
-          <span class="text-slate-400">{{ t('총 유저수', 'Total users') }} <span class="font-mono text-slate-100">{{ sortedUsers.length }}</span>{{ t('명', '') }}</span>
-          <!-- 지금 목록(검색·기간·하부보기 적용)에 보이는 유저들의 잔액 합계, 괄호는 일반 회원만 -->
-          <span class="text-slate-400" :title="`≈ ${usersBalanceTotal.all.toFixed(2)} USDT`">
-            {{ t('잔액 합계', 'Balance total') }} <span class="font-mono text-slate-100">{{ fmtUserBalance(usersBalanceTotal.all) }}</span>
-            <span class="text-slate-500">({{ t('회원만', 'members') }} <span class="font-mono">{{ fmtUserBalance(usersBalanceTotal.members) }}</span>)</span>
-          </span>
-          <button type="button" class="border border-white/20 bg-white/[0.06] px-3 py-1 text-slate-100 hover:bg-white/10" @click="load">↻ {{ t('새로고침', 'Refresh') }}</button>
-        </div>
-      </div>
-      <p class="text-[12px] text-slate-500">{{ t('칸을 고치고 다른 곳을 누르거나 Enter를 누르면 바로 저장됩니다. 잔액은 원화로 입력하면 현재 환율로 USDT로 바꿔 저장합니다.', 'Edit a cell and press Enter or click away to save. Balance is entered in KRW and saved as USDT at the current rate.') }}</p>
-
-      <div class="flex flex-wrap items-center gap-2 text-[13px]">
-        <div class="flex items-center gap-2 border border-white/15 bg-transparent px-2 py-1">
-          <AdminDateInput v-model="fromDate" class="w-32" />
-          <span class="text-slate-500">~</span>
-          <AdminDateInput v-model="toDate" class="w-32" />
-        </div>
-        <input v-model.trim="userSearch" :placeholder="t('아이디/이름 검색', 'Search by username/name')" :key="`user-search-users2-${locale}`" class="w-64 border border-white/15 bg-transparent px-2 py-1 outline-none placeholder:text-slate-600 focus:border-cyan-400" />
-        <span class="text-slate-400">{{ t('표시수', 'Rows') }}</span>
-        <input v-model.number="pageSizeInput" type="number" min="1" max="500" class="w-16 border border-white/15 bg-transparent px-2 py-1 text-right outline-none focus:border-cyan-400" />
-        <template v-if="referralFilter">
-          <span class="ml-2 text-indigo-200">{{ t(`하부보기: "${referralFilter}"의 전체 하부 조직`, `Downline of "${referralFilter}"`) }}</span>
-          <button type="button" class="text-cyan-300 hover:underline" @click="referralFilter = null">{{ t('필터 해제', 'Clear') }}</button>
-        </template>
-      </div>
-
-      <div v-if="loading" class="text-[13px] text-slate-400">{{ t('불러오는 중…', 'Loading…') }}</div>
-      <div v-else class="overflow-x-auto">
-        <table class="w-auto border-collapse text-[13px]">
+        <table class="w-auto border-collapse text-[14px]">
           <thead class="bg-white/[0.04] text-left text-slate-400">
             <tr>
               <th class="w-10 whitespace-nowrap border border-white/10 px-2 py-1 text-center font-normal">#</th>
@@ -258,7 +121,7 @@
                       step="0.1"
                       :placeholder="t('기본값', 'Default')"
                       :title="t('이 부관리자 전용 정산비율(%). 비워두면 정산/기타 설정의 기본값을 사용합니다.', 'Per-admin settlement rate (%). Blank = default.')"
-                      :key="`settlement-percent-users2-${u.id}-${locale}`"
+                      :key="`settlement-percent-users-${u.id}-${locale}`"
                       class="w-14 text-right font-mono bg-transparent px-2 py-1 text-slate-100 outline-none focus:bg-black/40 disabled:cursor-not-allowed disabled:opacity-50 [&>option]:bg-[#0b1726]"
                       @blur="saveUserRow(u.id)"
                       @keyup.enter="saveUserRow(u.id)"
@@ -286,7 +149,7 @@
         <div v-if="totalPages > 1" class="flex items-center gap-1">
           <button type="button" class="min-w-7 border border-white/20 bg-white/[0.06] px-2 py-0.5 hover:bg-white/10 disabled:opacity-30" :disabled="page <= 1" @click="page = 1">«</button>
           <button type="button" class="min-w-7 border border-white/20 bg-white/[0.06] px-2 py-0.5 hover:bg-white/10 disabled:opacity-30" :disabled="page <= 1" @click="page--">‹</button>
-          <button v-for="p in userPageNumbers" :key="`user-page-users2-${p}`" type="button" class="min-w-7 border border-white/20 bg-white/[0.06] px-2 py-0.5 hover:bg-white/10 disabled:opacity-30" :class="p === page ? '!bg-cyan-500/30 text-white' : ''" @click="page = p">{{ p }}</button>
+          <button v-for="p in userPageNumbers" :key="`user-page-users-${p}`" type="button" class="min-w-7 border border-white/20 bg-white/[0.06] px-2 py-0.5 hover:bg-white/10 disabled:opacity-30" :class="p === page ? '!bg-cyan-500/30 text-white' : ''" @click="page = p">{{ p }}</button>
           <span v-if="showUserPageTail" class="px-1 text-slate-500">~</span>
           <button v-if="showUserPageTail" type="button" class="min-w-7 border border-white/20 bg-white/[0.06] px-2 py-0.5 hover:bg-white/10 disabled:opacity-30" @click="page = totalPages">{{ totalPages }}</button>
           <button type="button" class="min-w-7 border border-white/20 bg-white/[0.06] px-2 py-0.5 hover:bg-white/10 disabled:opacity-30" :disabled="page >= totalPages" @click="page++">›</button>
@@ -1459,10 +1322,9 @@ const { t, locale } = useLocale()
 const { me, refresh } = useMe()
 await refresh()
 
-type TabKey = 'users' | 'users2' | 'liquidation' | 'misc' | 'nav' | 'profitCard' | 'roles' | 'profitEvents' | 'dbHealth' | 'dumpError' | 'chartTiming'
+type TabKey = 'users' | 'liquidation' | 'misc' | 'nav' | 'profitCard' | 'roles' | 'profitEvents' | 'dbHealth' | 'dumpError' | 'chartTiming'
 const tabs = computed<Array<{ key: TabKey; label: string }>>(() => [
-  { key: 'users', label: t('유저관리1', 'Users 1') },
-  { key: 'users2', label: t('유저관리2', 'Users 2') },
+  { key: 'users', label: t('유저관리', 'Users') },
   { key: 'liquidation', label: t('강제청산 기준 설정', 'Liquidation Threshold') },
   { key: 'misc', label: t('정산/기타 설정', 'Settlement/Other Settings') },
   { key: 'nav', label: t('메뉴구성', 'Menu Layout') },
@@ -1522,8 +1384,9 @@ function dateOnly(v: string) {
   return s ? s.slice(0, 10) : ''
 }
 const referralFilter = ref<string | null>(null)
-const sortKey = ref<'username' | 'name' | 'usdt' | 'referralCode' | 'topCode' | 'role' | 'created_at' | 'last_login'>('username')
-const sortDir = ref<'asc' | 'desc'>('asc')
+// 유저관리 기본 정렬: 잔액 많은 순
+const sortKey = ref<'username' | 'name' | 'usdt' | 'referralCode' | 'topCode' | 'role' | 'created_at' | 'last_login'>('usdt')
+const sortDir = ref<'asc' | 'desc'>('desc')
 const page = ref(1)
 const pageSizeInput = ref(20)
 const pageSize = computed(() => {
@@ -1607,7 +1470,7 @@ const sortedUsers = computed(() => {
   })
 })
 
-// 유저관리2 상단: 지금 목록의 잔액 합계(USDT)와 일반 회원만의 합계
+// 유저관리 상단: 지금 목록의 잔액 합계(USDT)와 일반 회원만의 합계
 const usersBalanceTotal = computed(() => {
   let all = 0
   let members = 0
@@ -1622,15 +1485,6 @@ function fmtUserBalance(usdt: number) {
   if (userKrwRate.value > 0) return Math.round(usdt * userKrwRate.value).toLocaleString('ko-KR') + t('원', ' KRW')
   return usdt.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' USDT'
 }
-// 유저관리2 탭을 처음 열면 잔액 많은 순(내림차순)으로 정렬해서 보여준다.
-let users2SortApplied = false
-watch(activeTab, (v) => {
-  if (v === 'users2' && !users2SortApplied) {
-    users2SortApplied = true
-    sortKey.value = 'usdt'
-    sortDir.value = 'desc'
-  }
-})
 const totalPages = computed(() => Math.max(1, Math.ceil(sortedUsers.value.length / pageSize.value)))
 const pagedUsers = computed(() => {
   const start = (page.value - 1) * pageSize.value
