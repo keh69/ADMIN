@@ -71,7 +71,6 @@
                 >
                   <option value="user">{{ t('회원', 'Member') }}</option>
                   <option v-for="r in grantableRoles" :key="r.id" :value="r.id">{{ r.label }}</option>
-                  <option v-if="me?.role === 'super_admin'" value="super_admin">{{ t('최고관리자', 'Super Admin') }}</option>
                 </select>
                 <span v-else class="block px-2 py-1 text-slate-100">{{ u.role }}</span>
               </td>
