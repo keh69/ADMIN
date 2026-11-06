@@ -48,14 +48,16 @@
               <th class="sortable-th cursor-pointer select-none whitespace-nowrap border border-white/10 px-2 py-1 text-right font-normal" @click="toggleSort('totalDepositKrw')">{{ t('총 입금액', 'Deposits') }}<span class="sort-icon">{{ sortArrow('totalDepositKrw') || ' ⇅' }}</span></th>
               <th class="sortable-th cursor-pointer select-none whitespace-nowrap border border-white/10 px-2 py-1 text-right font-normal" @click="toggleSort('totalWithdrawKrw')">{{ t('총 출금액', 'Withdrawals') }}<span class="sort-icon">{{ sortArrow('totalWithdrawKrw') || ' ⇅' }}</span></th>
               <th class="sortable-th cursor-pointer select-none whitespace-nowrap border border-white/10 px-2 py-1 text-right font-normal" @click="toggleSort('cumulativeProfit')">{{ t('누적수익', 'Cum. PnL') }}<span class="sort-icon">{{ sortArrow('cumulativeProfit') || ' ⇅' }}</span></th>
+              <th class="whitespace-nowrap border border-white/10 px-2 py-1 font-normal">{{ t('거래내역', 'Trades') }}</th>
               <th class="sortable-th cursor-pointer select-none whitespace-nowrap border border-white/10 px-2 py-1 font-normal" @click="toggleSort('created_at')">{{ t('가입일', 'Joined') }}<span class="sort-icon">{{ sortArrow('created_at') || ' ⇅' }}</span></th>
               <th class="sortable-th cursor-pointer select-none whitespace-nowrap border border-white/10 px-2 py-1 font-normal" @click="toggleSort('last_login')">{{ t('최근 접속일', 'Last Login') }}<span class="sort-icon">{{ sortArrow('last_login') || ' ⇅' }}</span></th>
               <th class="sortable-th cursor-pointer select-none whitespace-nowrap border border-white/10 px-2 py-1 font-normal" @click="toggleSort('online')">{{ t('접속여부', 'Status') }}<span class="sort-icon">{{ sortArrow('online') || ' ⇅' }}</span></th>
+              <th class="whitespace-nowrap border border-white/10 px-2 py-1 font-normal">{{ t('차단', 'Block') }}</th>
             </tr>
           </thead>
           <tbody>
             <tr v-if="!loading && filtered.length === 0">
-              <td colspan="14" class="border border-white/10 px-2 py-6 text-center text-slate-500">{{ t('데이터가 없습니다.', 'No data available.') }}</td>
+              <td colspan="16" class="border border-white/10 px-2 py-6 text-center text-slate-500">{{ t('데이터가 없습니다.', 'No data available.') }}</td>
             </tr>
             <tr v-for="(u, ui) in paged" :key="u.id" class="hover:bg-white/[0.03]">
               <td class="border border-white/10 px-2 py-1 text-center font-mono text-slate-500">{{ (page - 1) * pageSize + ui + 1 }}</td>
@@ -104,20 +106,30 @@
               <td class="whitespace-nowrap border border-white/10 px-2 py-1 text-right font-mono text-slate-200">{{ isStaff(u) ? '-' : fmtKrw(u.totalWithdrawKrw) }}</td>
               <td class="whitespace-nowrap border border-white/10 px-2 py-1 text-right font-mono">
                 <span v-if="isStaff(u)" class="text-slate-200">-</span>
-                <button
-                  v-else
-                  type="button"
-                  class="border border-white/20 bg-white/[0.06] px-2 py-0.5 hover:bg-white/10"
-                  :class="u.cumulativeProfit >= 0 ? 'text-rose-300' : 'text-sky-300'"
-                  @click="openTradeModal(u)"
-                >
-                  {{ signedProfitKrw(u.cumulativeProfit) }}
-                </button>
+                <span v-else :class="u.cumulativeProfit >= 0 ? 'text-rose-300' : 'text-sky-300'">{{ signedProfitKrw(u.cumulativeProfit) }}</span>
+              </td>
+              <td class="whitespace-nowrap border border-white/10 px-2 py-1 text-center">
+                <span v-if="isStaff(u)" class="text-slate-600">—</span>
+                <button v-else type="button" class="border border-white/20 bg-white/[0.06] px-2 py-0.5 text-[12px] hover:bg-white/10" @click="openTradeModal(u)">{{ t('거래내역', 'Trades') }}</button>
               </td>
               <td class="whitespace-nowrap border border-white/10 px-2 py-1 font-mono text-slate-400">{{ dateOnly(u.created_at) }}</td>
               <td class="whitespace-nowrap border border-white/10 px-2 py-1 font-mono text-slate-400">{{ u.last_login ? dateOnly(u.last_login) : '—' }}</td>
               <td class="whitespace-nowrap border border-white/10 px-2 py-1" :class="u.online ? 'text-[#22ab94]' : 'text-slate-500'">
                 {{ u.online ? t('● 접속', '● Online') : t('○ 미접속', '○ Offline') }}
+              </td>
+              <!-- 차단: 승인상태를 거절로 바꾼다(접속 중이면 5초 안에 자동 로그아웃) -->
+              <td class="whitespace-nowrap border border-white/10 px-2 py-1 text-center">
+                <span v-if="!canEditBalance || u.roleId === 'super_admin'" class="text-slate-600">—</span>
+                <span v-else-if="u.approvalStatus === 'rejected'" class="text-[12px] text-rose-300">{{ t('차단됨', 'Blocked') }}</span>
+                <button
+                  v-else
+                  type="button"
+                  class="border border-rose-400/40 bg-rose-500/10 px-2 py-0.5 text-[12px] text-rose-200 hover:bg-rose-500/20 disabled:opacity-40"
+                  :disabled="approvalSavingId === u.id"
+                  @click="blockMember(u)"
+                >
+                  {{ t('차단', 'Block') }}
+                </button>
               </td>
             </tr>
           </tbody>
@@ -416,6 +428,11 @@ function approvalText(st?: string) {
   return { ko: '승인', en: 'Approved', cls: 'text-emerald-300' }
 }
 const approvalSavingId = ref<number | null>(null)
+// 차단 = 승인상태를 거절로. 서버가 그 회원의 로그인을 끊어서, 접속 중이면 회원 화면이 5초 안에 로그아웃된다.
+async function blockMember(u: MemberRow) {
+  if (process.client && !window.confirm(t(`${u.username} 회원을 차단할까요? (승인상태가 거절로 바뀌고, 접속 중이면 5초 안에 로그아웃됩니다)`, `Block ${u.username}? (Approval becomes rejected; if online they are logged out within 5 seconds)`))) return
+  await setApproval(u, 'rejected')
+}
 const approvalError = ref<string | null>(null)
 async function setApproval(u: MemberRow, status: 'approved' | 'rejected' | 'pending') {
   if ((u.approvalStatus || 'approved') === status || approvalSavingId.value) return

@@ -65,9 +65,16 @@ export default defineEventHandler(async (event) => {
     const ids = (users || []).map((u: any) => Number(u.id)).filter(Boolean)
     if (!ids.length) return { items: [] }
 
-    const sessions = await maybeCache('admin:members:sessions', 3000, async () => {
-      const { data, error } = await supa.from('bitduck_sessions').select('user_id, expires_at').in('user_id', ids).gt('expires_at', nowIso)
-      if (error) throw error
+    // 접속여부: 로그인 세션(7일 유지)이 아니라, 회원 화면이 20초마다 보내는 접속 신호(bitduck_user_presence)가
+    // 최근 60초 안에 들어온 회원만 "접속"으로 본다(실시간 접속자 화면과 같은 기준).
+    const sessions = await maybeCache('admin:members:presence', 3000, async () => {
+      const since = new Date(Date.now() - 60 * 1000).toISOString()
+      const { data, error } = await supa.from('bitduck_user_presence').select('user_id, updated_at').in('user_id', ids).gte('updated_at', since)
+      if (error) {
+        // 접속 신호 테이블이 없을 때만 예전 방식(유효한 로그인 세션)
+        const { data: ss } = await supa.from('bitduck_sessions').select('user_id, expires_at').in('user_id', ids).gt('expires_at', nowIso)
+        return ss || []
+      }
       return data || []
     })
     const onlineSet = new Set((sessions || []).map((s: any) => Number(s.user_id)))
