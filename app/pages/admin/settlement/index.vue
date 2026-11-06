@@ -204,8 +204,9 @@ const error = ref<string | null>(null)
 const keyword = ref('')
 
 type SortKey = 'username' | 'name' | 'balanceUsdt' | 'baseAmount' | 'settlementAmount'
-const sortKey = ref<SortKey | null>(null)
-const sortDir = ref<'asc' | 'desc'>('asc')
+// 기본 정렬: 총 손실금액(기준금액) 많은 순
+const sortKey = ref<SortKey | null>('baseAmount')
+const sortDir = ref<'asc' | 'desc'>('desc')
 
 function toggleSort(key: SortKey) {
   if (sortKey.value === key) {
