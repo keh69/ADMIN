@@ -833,7 +833,8 @@ async function load(silent = false) {
   if (!silent) loading.value = true
   try {
     const res = await $fetch<{ items: MemberRow[] }>('/api/admin/members', { query: silent ? { p: 1 } : undefined })
-    items.value = res.items || []
+    // 최고관리자(admin) 계정은 회원목록에 보이지 않게 한다(총 보유금액 합계에서도 빠짐).
+    items.value = (res.items || []).filter((u) => u.roleId !== 'super_admin')
     syncRoleDraft(items.value)
     if (selectedMember.value) {
       const fresh = (res.items || []).find((u) => Number(u.id) === Number(selectedMember.value?.id))
