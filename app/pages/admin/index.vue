@@ -1,21 +1,5 @@
 <template>
   <div class="space-y-6">
-    <div class="rounded-2xl border border-white/10 bg-white/5 p-6">
-      <div class="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 class="text-xl font-semibold">{{ t('어드민', 'Admin') }}</h1>
-          <p class="mt-1 text-sm text-slate-400">{{ me?.username }} ({{ me?.role }})</p>
-        </div>
-        <NuxtLink
-          v-if="me?.role === 'super_admin'"
-          to="/admin/create-branch"
-          class="rounded-md bg-white/10 px-4 py-2 text-sm hover:bg-white/15"
-        >
-          {{ t('계정생성', 'Create Account') }}
-        </NuxtLink>
-      </div>
-    </div>
-
     <!-- 탭 -->
     <div class="flex flex-wrap gap-1 border-b border-white/10">
       <button
@@ -30,8 +14,8 @@
       </button>
     </div>
 
-    <!-- 유저 관리 -->
-    <div v-show="activeTab === 'users'" class="space-y-3">
+    <!-- 유저 관리: 표가 넓어서, 큰 화면에서는 페이지 좌우 여백(15%)을 넘어 화면 양쪽 24px까지 똑같이 넓혀 좌우 공백을 맞춘다 -->
+    <div v-show="activeTab === 'users'" class="space-y-3 lg:mx-[calc(24px_-_21.42857%)]">
       <div class="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 class="text-lg font-semibold">{{ t('유저 관리', 'User Management') }}</h2>
@@ -82,7 +66,7 @@
 
       <div>
         <div v-if="loading" class="text-sm text-slate-400">{{ t('불러오는 중…', 'Loading…') }}</div>
-        <div v-else>
+        <div v-else class="overflow-x-auto">
           <table class="w-full text-sm">
             <thead class="border-b border-[#12314a] text-[12px] text-slate-500">
               <tr>
