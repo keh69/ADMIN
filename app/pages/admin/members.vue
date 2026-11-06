@@ -94,12 +94,12 @@
                 <button type="button" class="underline-offset-4 hover:text-cyan-300 hover:underline" @click="memberInfoModal?.open(u.username)">{{ u.username }}</button>
               </td>
               <!-- 회원이름·추천코드·보유금액: 더블클릭하면 그 자리에서 바로 수정(Enter/다른 곳 클릭 = 저장, Esc = 취소) -->
-              <td class="whitespace-nowrap border border-white/10 px-2 py-1 text-slate-200" :class="canEditCell(u, 'name') ? 'cursor-text' : ''" @dblclick="startEdit(u, 'name')">
+              <td class="whitespace-nowrap border border-white/10 px-2 py-1 text-slate-200" :class="canEditCell(u, 'name') ? 'cursor-text' : ''" @dblclick="startEdit(u, 'name', $event)">
                 <input
                   v-if="isEditing(u, 'name')"
                   :ref="setEditInput"
                   :value="editValue"
-                  class="w-full min-w-[6em] bg-black/50 px-1 py-0  text-white outline-none ring-1 ring-cyan-400"
+                  size="1" :style="editInputStyle" class="m-0 block bg-black/50 p-0 leading-[inherit] text-white outline-none ring-1 ring-inset ring-cyan-400"
                   @input="onEditInput"
                   @keydown.enter.prevent="commitEdit(u)"
                   @keydown.esc.prevent="cancelEdit"
@@ -107,12 +107,12 @@
                 />
                 <template v-else>{{ u.name || '—' }}</template>
               </td>
-              <td class="whitespace-nowrap border border-white/10 px-2 py-1 font-mono text-slate-300" :class="canEditCell(u, 'referralCode') ? 'cursor-text' : ''" @dblclick="startEdit(u, 'referralCode')">
+              <td class="whitespace-nowrap border border-white/10 px-2 py-1 font-mono text-slate-300" :class="canEditCell(u, 'referralCode') ? 'cursor-text' : ''" @dblclick="startEdit(u, 'referralCode', $event)">
                 <input
                   v-if="isEditing(u, 'referralCode')"
                   :ref="setEditInput"
                   :value="editValue"
-                  class="w-full min-w-[8ch] bg-black/50 px-1 py-0 font-mono text-white outline-none ring-1 ring-cyan-400"
+                  size="1" :style="editInputStyle" class="m-0 block bg-black/50 p-0 font-mono leading-[inherit] text-white outline-none ring-1 ring-inset ring-cyan-400"
                   @input="onEditInput"
                   @keydown.enter.prevent="commitEdit(u)"
                   @keydown.esc.prevent="cancelEdit"
@@ -121,13 +121,13 @@
                 <template v-else>{{ u.referralCode || '—' }}</template>
               </td>
               <td v-if="showTopCode" class="whitespace-nowrap border border-white/10 px-2 py-1 font-mono text-slate-500">{{ u.topCode || '—' }}</td>
-              <td class="whitespace-nowrap border border-white/10 px-2 py-1 text-right font-mono text-slate-200" :class="canEditCell(u, 'balance') ? 'cursor-text' : ''" @dblclick="startEdit(u, 'balance')">
+              <td class="whitespace-nowrap border border-white/10 px-2 py-1 text-right font-mono text-slate-200" :class="canEditCell(u, 'balance') ? 'cursor-text' : ''" @dblclick="startEdit(u, 'balance', $event)">
                 <input
                   v-if="isEditing(u, 'balance')"
                   :ref="setEditInput"
                   :value="editValue"
                   inputmode="numeric"
-                  class="w-full min-w-[12ch] bg-black/50 px-1 py-0 text-right font-mono text-white outline-none ring-1 ring-cyan-400"
+                  size="1" :style="editInputStyle" class="m-0 block bg-black/50 p-0 text-right font-mono leading-[inherit] text-white outline-none ring-1 ring-inset ring-cyan-400"
                   @input="onEditInput"
                   @keydown.enter.prevent="commitEdit(u)"
                   @keydown.esc.prevent="cancelEdit"
@@ -485,8 +485,17 @@ function balanceEditText(usdt: number) {
   if (krwPerUsdt.value > 0) return Math.round(Number(usdt || 0) * krwPerUsdt.value).toLocaleString('ko-KR')
   return String(Number(usdt || 0))
 }
-function startEdit(u: MemberRow, field: EditField) {
+// 수정칸은 원래 칸의 글자 영역과 똑같은 크기로 그린다(더블클릭해도 칸 크기가 바뀌지 않게)
+const editInputStyle = ref<Record<string, string>>({})
+function startEdit(u: MemberRow, field: EditField, e?: MouseEvent) {
   if (!canEditCell(u, field)) return
+  const td = e?.currentTarget as HTMLElement | undefined
+  if (td) {
+    const cs = getComputedStyle(td)
+    const w = td.clientWidth - parseFloat(cs.paddingLeft || '0') - parseFloat(cs.paddingRight || '0')
+    const h = td.clientHeight - parseFloat(cs.paddingTop || '0') - parseFloat(cs.paddingBottom || '0')
+    editInputStyle.value = { width: `${Math.max(20, w)}px`, height: `${Math.max(14, h)}px`, font: 'inherit' }
+  }
   editCell.value = { id: u.id, field }
   editValue.value = field === 'balance' ? balanceEditText(u.balanceUsdt) : String((u as any)[field] || '')
   editInitial = editValue.value
