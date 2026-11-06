@@ -79,7 +79,7 @@
               </td>
               <td class="border border-white/10 px-2 py-1 text-slate-200">{{ t.name }}</td>
               <td class="border border-white/10 px-2 py-1 text-slate-300">{{ t.affiliateName }}</td>
-              <td class="border border-white/10 px-2 py-1 font-semibold text-slate-100">{{ t.symbol }}</td>
+              <td class="border border-white/10 px-2 py-1 text-[14px] text-slate-100">{{ t.symbol }}</td>
               <td class="border border-white/10 px-2 py-1">
                 <span
                   class="rounded px-2 py-1 text-[12px] font-semibold ring-1"
