@@ -229,7 +229,7 @@
                 <td class="border border-white/10 p-0">
                   <input v-model.trim="userDraft[u.id].referralCode" :disabled="isLockedUser(u)" class="w-24 bg-transparent px-2 py-1 text-slate-100 outline-none focus:bg-black/40 disabled:cursor-not-allowed disabled:opacity-50 [&>option]:bg-[#0b1726]" @blur="saveUserRow(u.id)" @keyup.enter="saveUserRow(u.id)" />
                 </td>
-                <td class="border border-white/10 px-2 py-1 whitespace-nowrap text-slate-300">{{ u.topCode || '—' }}</td>
+                <td class="border border-white/10 px-2 py-1 whitespace-nowrap text-slate-500">{{ u.topCode || '—' }}</td>
                 <td class="border border-white/10 p-0">
                   <select v-model="userDraft[u.id].role" :disabled="isLockedUser(u)" class="w-28 bg-transparent px-2 py-1 text-slate-100 outline-none focus:bg-black/40 disabled:cursor-not-allowed disabled:opacity-50 [&>option]:bg-[#0b1726]" @change="saveUserRow(u.id)">
                     <option value="user">{{ t('회원', 'Member') }}</option>
