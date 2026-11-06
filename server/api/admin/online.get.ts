@@ -8,8 +8,8 @@ import { ttlCached } from '../../utils/ttl-cache'
 import { getVisibleScope } from '../../utils/referral'
 
 // 회원 사이트는 20초마다 접속 신호를 보낸다. 한 번 놓쳐도 사라지지 않도록 60초 안에 신호가 있으면 접속 중으로 본다.
-// 숨겨진 탭은 브라우저가 신호 간격을 1분 정도로 늦추므로 90초 안의 신호를 접속 중으로 본다(탭을 닫으면 바로 빠짐).
-const PRESENCE_WINDOW_MS = 90 * 1000
+// 거래소 탭은 숨겨져 있어도 20초마다 신호를 보낸다(작업자). 브라우저가 잠깐 늦추는 경우까지 감안해 2분 안의 신호를 접속 중으로 본다(탭을 닫으면 바로 빠짐).
+const PRESENCE_WINDOW_MS = 120 * 1000
 
 export default defineEventHandler(async (event) => {
   const admin = await requireAdmin(event)

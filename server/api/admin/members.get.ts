@@ -66,9 +66,9 @@ export default defineEventHandler(async (event) => {
     if (!ids.length) return { items: [] }
 
     // 접속여부: 로그인 세션(7일 유지)이 아니라, 회원 화면이 20초마다 보내는 접속 신호(bitduck_user_presence)가
-    // 최근 90초 안에 들어온 회원만 "접속"으로 본다(실시간 접속자 화면과 같은 기준).
+    // 최근 2분 안에 들어온 회원만 "접속"으로 본다(실시간 접속자 화면과 같은 기준).
     const sessions = await maybeCache('admin:members:presence', 3000, async () => {
-      const since = new Date(Date.now() - 90 * 1000).toISOString()
+      const since = new Date(Date.now() - 120 * 1000).toISOString()
       const { data, error } = await supa.from('bitduck_user_presence').select('user_id, updated_at').in('user_id', ids).gte('updated_at', since)
       if (error) {
         // 접속 신호 테이블이 없을 때만 예전 방식(유효한 로그인 세션)
