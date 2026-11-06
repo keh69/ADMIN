@@ -249,34 +249,12 @@ const navEntries = computed<NavEntry[]>(() => {
     group('futures', '선물거래', 'Futures', ['positions', 'trades']),
     link('settlement'),
     link('messages'),
-    // 이벤트▾ (총관리자 전용): 테스트/거래소 이벤트를 각각 관리. 예) 이벤트1(테스트), 이벤트1(거래소)
-    isSuper.value
-      ? {
-          type: 'group',
-          key: 'events',
-          ko: '이벤트',
-          en: 'Events',
-          items: adminEvents.value.length
-            ? adminEvents.value.map((e) => ({ to: `/admin/events/${e.id}`, ko: e.label, en: e.label }))
-            : [{ to: '/admin/dashboard', ko: '(등록된 이벤트 없음)', en: '(no events)', noActive: true }]
-        }
-      : null
+    // 이벤트 (총관리자 전용): 누르면 이벤트 설정 화면으로 간다. 이벤트 고르기/추가는 그 화면 위쪽에서 한다.
+    isSuper.value ? { type: 'link', key: 'events', item: { to: '/admin/events', ko: '이벤트', en: 'Events' } } : null
   ]
   return list.filter((e): e is NavEntry => !!e)
 })
 
-// 상단 [이벤트] 드롭다운 목록(bitduck_events: 테스트/거래소)
-const adminEvents = ref<Array<{ id: number; label: string; site: string; code: string }>>([])
-async function loadAdminEvents() {
-  if (!isSuper.value) return
-  try {
-    const res = await $fetch<{ items: Array<{ id: number; label: string; site: string; code: string }> }>('/api/admin/events')
-    adminEvents.value = res.items || []
-  } catch {
-    adminEvents.value = []
-  }
-}
-watch(isSuper, (v) => { if (v) loadAdminEvents() }, { immediate: true })
 
 function isGroupActive(entry: NavEntry) {
   return entry.type === 'group' && entry.items.some((i) => isActive(i.to))
