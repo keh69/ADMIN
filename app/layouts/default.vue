@@ -286,7 +286,7 @@ function isGroupActive(entry: NavEntry) {
 const moreItems = computed<NavItem[]>(() => {
   const list: NavItem[] = []
   // 설정/역할/이벤트 관리 등 기존 관리자 대시보드("어드민")는 총관리자에게만 보이며 기타 메뉴 안에 둔다.
-  if (isSuper.value) list.push({ to: '/admin', ko: '어드민', en: 'Admin' })
+  if (isSuper.value) list.push({ to: '/admin', ko: '설정', en: 'Settings' })
   if (isSuper.value) list.push({ to: '/admin/create-branch', ko: '계정생성', en: 'Create Account' })
   if (isSuper.value) list.push({ to: '/admin/users', ko: '회원 잔고/역할 관리', en: 'User Balance/Role' })
   return list
