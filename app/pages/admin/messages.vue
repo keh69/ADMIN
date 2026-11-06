@@ -232,7 +232,12 @@
                 />
                 <div v-if="replyImages.length" class="mt-2 flex flex-wrap gap-2">
                   <div v-for="(img, ii) in replyImages" :key="img.id" class="relative">
-                    <img :src="img.dataUrl" alt="" class="h-16 w-16 rounded-md border border-white/10 object-cover" />
+                    <img
+                      :src="img.dataUrl"
+                      alt=""
+                      class="h-16 w-16 cursor-zoom-in rounded-md border border-white/10 object-cover hover:border-cyan-400/50"
+                      @click="previewImage = img.dataUrl"
+                    />
                     <button
                       type="button"
                       class="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-slate-900 text-[12px] leading-none text-slate-200 ring-1 ring-white/20 hover:bg-rose-600"
@@ -405,6 +410,22 @@
         </div>
       </div>
     </div>
+    <Teleport to="body">
+      <div
+        v-if="previewImage"
+        class="fixed inset-0 z-[200] flex cursor-zoom-out items-center justify-center bg-black/80 p-4"
+        @click="previewImage = null"
+      >
+        <img :src="previewImage" alt="" class="max-h-[90vh] max-w-[92vw] rounded-lg object-contain shadow-2xl" />
+        <button
+          type="button"
+          class="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-white/15 text-xl leading-none text-white hover:bg-white/25"
+          @click.stop="previewImage = null"
+        >
+          ×
+        </button>
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -695,6 +716,13 @@ const sendMessageText = ref<string | null>(null)
 // ── 고객센터 쪽지 이미지 첨부: Ctrl+V 붙여넣기 / [첨부파일 추가] (비회원 상담은 제외) ──
 type PendingImage = { id: number; dataUrl: string }
 const replyImages = ref<PendingImage[]>([])
+// 첨부한 그림(보내기 전 미리보기)을 누르면 크게 보여준다. 바깥을 누르거나 Esc로 닫힘.
+const previewImage = ref<string | null>(null)
+function onPreviewKey(e: KeyboardEvent) {
+  if (e.key === 'Escape' && previewImage.value) previewImage.value = null
+}
+onMounted(() => window.addEventListener('keydown', onPreviewKey))
+onBeforeUnmount(() => window.removeEventListener('keydown', onPreviewKey))
 const replyAttachError = ref<string | null>(null)
 const replyFileInput = ref<HTMLInputElement | null>(null)
 let pendingImageSeq = 0
@@ -730,6 +758,7 @@ function onReplyFilePick(e: Event) {
   addReplyFiles(files)
 }
 function removeReplyImage(index: number) {
+  if (previewImage.value === replyImages.value[index]?.dataUrl) previewImage.value = null
   replyImages.value.splice(index, 1)
   replyAttachError.value = null
 }
