@@ -46,7 +46,14 @@ export function useMessages() {
     toast.value = { visible: true, text }
     toastTimer = setTimeout(() => {
       toast.value = null
-    }, 4000)
+    }, 6000)
+  }
+
+  // "새 쪽지가 도착했습니다" 팝업을 누르면 고객센터로 가서 그 쪽지(가장 최근 안 읽은 대화)를 바로 연다.
+  function openNewMessage() {
+    if (toastTimer) clearTimeout(toastTimer)
+    toast.value = null
+    return navigateTo({ path: '/admin/messages', query: { unread: String(Date.now()) } })
   }
 
   // 실시간 도착 알림음은 총관리자 또는 "어드민권한"(고객센터 수정 권한)이 있는 관리자만 울린다.
@@ -109,5 +116,5 @@ export function useMessages() {
     pollTimer = null
   }
 
-  return { unread, loading, toast, refreshUnread, startUnreadPolling, stopUnreadPolling }
+  return { unread, loading, toast, refreshUnread, startUnreadPolling, stopUnreadPolling, openNewMessage }
 }

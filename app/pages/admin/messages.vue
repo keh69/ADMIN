@@ -992,4 +992,31 @@ async function loadAll() {
 
 await loadAll()
 await loadGuestThreads().catch(() => {})
+
+// 상단 "새 쪽지가 도착했습니다" 팝업을 누르면 ?unread= 로 들어온다 → 가장 최근에 온 안 읽은 대화를 바로 열어 읽음 처리한다.
+const route = useRoute()
+const router = useRouter()
+async function openNewestUnreadThread() {
+  await loadThreads().catch(() => {})
+  const time = (v: string) => {
+    const n = new Date(v).getTime()
+    return Number.isFinite(n) ? n : 0
+  }
+  const byRecent = [...threads.value].sort((a, b) => time(b.lastAt) - time(a.lastAt))
+  const target = byRecent.find((th) => Number(th.unreadCount || 0) > 0) || byRecent[0]
+  activeTab.value = 'members'
+  threadKeyword.value = ''
+  if (target) await openThread(target, true)
+  const { unread: _u, ...rest } = route.query
+  router.replace({ query: rest }).catch(() => {})
+}
+onMounted(() => {
+  if (route.query.unread) openNewestUnreadThread()
+})
+watch(
+  () => route.query.unread,
+  (v, old) => {
+    if (process.client && v && v !== old) openNewestUnreadThread()
+  }
+)
 </script>
